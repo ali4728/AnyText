@@ -279,6 +279,129 @@ namespace ScintillaNET.Demo.Utils
             return path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
         }
 
+        public static bool IsXmlFile(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return false;
+            return path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string UnwrapXmlToTempFile(string sourcePath)
+        {
+            string tempDir;
+            bool reusingZipDir = false;
+
+            if (!string.IsNullOrEmpty(LastTempZipDir) && sourcePath.StartsWith(LastTempZipDir, StringComparison.OrdinalIgnoreCase))
+            {
+                tempDir = LastTempZipDir;
+                reusingZipDir = true;
+            }
+            else
+            {
+                CleanupTempEdiDir();
+                tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_EDI_" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(tempDir);
+                LastTempEdiDir = tempDir;
+            }
+
+            string nameWithoutExt = Path.GetFileNameWithoutExtension(sourcePath);
+            string ext = Path.GetExtension(sourcePath);
+            string tempFile = Path.Combine(tempDir, nameWithoutExt + "_unwrapped" + ext);
+
+            int bufferSize = 131072; // 128KB
+            string newLine = Environment.NewLine;
+
+            using (StreamReader reader = new StreamReader(sourcePath))
+            using (StreamWriter writer = new StreamWriter(tempFile, false, new UTF8Encoding(false), 65536))
+            {
+                char[] buffer = new char[bufferSize];
+                int charsRead;
+                int indent = 0;
+                bool insideTag = false;
+                bool tagIsClosing = false;
+                bool tagIsSelfClosing = false;
+                bool tagIsDeclaration = false;
+                StringBuilder tagBuffer = new StringBuilder(256);
+                StringBuilder textBuffer = new StringBuilder(256);
+                bool isFirstTag = true;
+
+                while ((charsRead = reader.Read(buffer, 0, bufferSize)) > 0)
+                {
+                    for (int i = 0; i < charsRead; i++)
+                    {
+                        char c = buffer[i];
+
+                        if (c == '\r' || c == '\n')
+                            continue;
+
+                        if (c == '<')
+                        {
+                            // Flush any text content before tag
+                            if (textBuffer.Length > 0)
+                            {
+                                string text = textBuffer.ToString().Trim();
+                                if (text.Length > 0)
+                                {
+                                    writer.Write(text);
+                                }
+                                textBuffer.Length = 0;
+                            }
+
+                            insideTag = true;
+                            tagBuffer.Length = 0;
+                            tagBuffer.Append(c);
+                        }
+                        else if (c == '>' && insideTag)
+                        {
+                            tagBuffer.Append(c);
+                            string tag = tagBuffer.ToString();
+                            insideTag = false;
+
+                            tagIsClosing = tag.Length > 1 && tag[1] == '/';
+                            tagIsSelfClosing = tag.Length > 1 && tag[tag.Length - 2] == '/';
+                            tagIsDeclaration = tag.Length > 1 && (tag[1] == '?' || tag[1] == '!');
+
+                            if (tagIsClosing)
+                                indent = Math.Max(0, indent - 1);
+
+                            if (!isFirstTag)
+                                writer.Write(newLine);
+                            isFirstTag = false;
+
+                            for (int t = 0; t < indent; t++)
+                                writer.Write("  ");
+
+                            writer.Write(tag);
+
+                            if (!tagIsClosing && !tagIsSelfClosing && !tagIsDeclaration)
+                                indent++;
+
+                            tagBuffer.Length = 0;
+                        }
+                        else if (insideTag)
+                        {
+                            tagBuffer.Append(c);
+                        }
+                        else
+                        {
+                            textBuffer.Append(c);
+                        }
+                    }
+                }
+
+                // Flush remaining
+                if (textBuffer.Length > 0)
+                {
+                    string text = textBuffer.ToString().Trim();
+                    if (text.Length > 0)
+                        writer.Write(text);
+                }
+            }
+
+            Console.WriteLine("Unwrapped XML to temp: " + tempFile + (reusingZipDir ? " (reused ZIP dir)" : ""));
+            return tempFile;
+        }
+
         public static string ExtractZipToTemp(string zipPath)
         {
             CleanupTempZipDir();

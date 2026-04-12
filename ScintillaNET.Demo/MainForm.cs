@@ -221,6 +221,7 @@ namespace ScintillaNET.Demo {
 			FileUtils.LineOffsetIndex = null;
 			labelTotalBytes.Text = String.Format("Bytes: {0:n0}", 0);
 			labelTotals.Text = "0";
+			textBoxPage.Text = "0";
 			this.Text = "";
 
 		}
@@ -397,6 +398,7 @@ namespace ScintillaNET.Demo {
 			FileUtils.CurFileName = path;
 			FileUtils.fileHasLineBreaks = false;
 			FileUtils.CleanupTempEdiDir();
+			textBoxPage.Text = "0";
 
 			// Only reset OriginalFileName if this is not a file from a ZIP extraction
 			if (string.IsNullOrEmpty(FileUtils.LastTempZipDir) || !path.StartsWith(FileUtils.LastTempZipDir, StringComparison.OrdinalIgnoreCase))
@@ -506,6 +508,31 @@ namespace ScintillaNET.Demo {
 									int totPagesEdi = (int)(FileUtils.fileSize / limit);
 									labelTotals.Text = totPagesEdi.ToString();
 									TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
+									UpdateLineNumbers(1);
+								}
+								finally
+								{
+									this.Cursor = Cursors.Default;
+								}
+								return;
+							}
+							else if (FileUtils.IsXmlFile(path))
+							{
+								this.Cursor = Cursors.WaitCursor;
+								try
+								{
+									string tempFile = FileUtils.UnwrapXmlToTempFile(path);
+									FileUtils.OriginalFileName = path;
+									FileUtils.CurFileName = tempFile;
+									FileInfo tempFi = new FileInfo(tempFile);
+									FileUtils.fileSize = tempFi.Length;
+									FileUtils.fileHasLineBreaks = true;
+									FileUtils.LineOffsetIndex = null;
+									labelTotalBytes.Text = String.Format("Bytes: {0:n0}", FileUtils.fileSize);
+									int totPagesXml = (int)(FileUtils.fileSize / limit);
+									labelTotals.Text = totPagesXml.ToString();
+									TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
+									InitSyntaxColoringXML();
 									UpdateLineNumbers(1);
 								}
 								finally
