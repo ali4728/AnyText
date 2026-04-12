@@ -54,6 +54,9 @@ byte[] ReadChunk(string filePath, long offset, int size);
 - Files often contain one long line
 - Split using segment terminator (usually `~`)
 - Insert newline after each segment
+- Save a copy of file in temp folder after unwrapping for faster access
+- Unwrap X12 files automatically on first load if they contain no newlines
+- If X12 file already contains newlines, no need to use temp file
 
 Example:
 ```
@@ -89,8 +92,8 @@ scintilla.Text = processedChunk;
 ---
 
 ### 5. Search Functionality
-- Search within current chunk
-- Optional: extend to multi-page search
+- Search the entire file
+- Searching within current chunk will be handled by Scintilla's built-in search
 - Highlight matches in Scintilla
 
 ---
@@ -103,7 +106,6 @@ scintilla.Text = processedChunk;
 - Use:
   - FileStream
   - Buffered reads
-  - Minimal memory footprint
 
 ---
 
@@ -165,19 +167,10 @@ class PagingController
 ---
 
 ## Constraints
-- No full file parsing
 - No full XML DOM loading
 - No editing features
 - Focus on speed and responsiveness
 
----
-
-## Future Enhancements (Optional)
-- Jump to specific segment (EDI)
-- Jump to XML tag
-- Multi-chunk search
-- Bookmark positions
-- Lazy loading with async UI
 
 ---
 
@@ -190,6 +183,4 @@ class PagingController
   - ScintillaNET integration
 - Ensure:
   - High performance
-  - Low memory usage
-  - Clean, modular code
   - Don's ask for permission to build. Just build the components as needed to achieve the goals outlined above.
