@@ -215,6 +215,7 @@ namespace ScintillaNET.Demo {
 		private void InitControls()
 		{
 			FileUtils.CurFileName = "";
+			FileUtils.OriginalFileName = "";
 			FileUtils.fileSize = 0;
 			FileUtils.LineOffsetIndex = null;
 			labelTotalBytes.Text = String.Format("Bytes: {0:n0}", 0);
@@ -394,6 +395,8 @@ namespace ScintillaNET.Demo {
 			richTextBoxBottom.Text = "";
 			FileUtils.CurFileName = path;
 			FileUtils.fileHasLineBreaks = false;
+			FileUtils.CleanupTempEdiDir();
+			FileUtils.OriginalFileName = "";
 
 			if (File.Exists(path)) 
 			{
@@ -467,6 +470,38 @@ namespace ScintillaNET.Demo {
 
 						TextArea.Text = FileUtils.readNBites(path, limit, 0);
 						FileUtils.GCTrigger++;
+
+						// Auto-unwrap EDI files with no line breaks to temp file
+						if (!FileUtils.fileHasLineBreaks)
+						{
+							EDIHelper ediHelper = new EDIHelper();
+							if (ediHelper.IsEDIFile(path))
+							{
+								this.Cursor = Cursors.WaitCursor;
+								try
+								{
+									Delimeters del = new Delimeters(path);
+									string tempFile = FileUtils.UnwrapEdiToTempFile(path, del.SegmentDelimeter);
+									FileUtils.OriginalFileName = path;
+									FileUtils.CurFileName = tempFile;
+									FileInfo tempFi = new FileInfo(tempFile);
+									FileUtils.fileSize = tempFi.Length;
+									FileUtils.fileHasLineBreaks = true;
+									FileUtils.LineOffsetIndex = null;
+									labelTotalBytes.Text = String.Format("Bytes: {0:n0}", FileUtils.fileSize);
+									int totPagesEdi = (int)(FileUtils.fileSize / limit);
+									labelTotals.Text = totPagesEdi.ToString();
+									TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
+									UpdateLineNumbers(1);
+								}
+								finally
+								{
+									this.Cursor = Cursors.Default;
+								}
+								return;
+							}
+						}
+
 						if (FileUtils.fileHasLineBreaks)
 						{
 							UpdateLineNumbers(1);
@@ -1008,18 +1043,56 @@ namespace ScintillaNET.Demo {
 		private void buttonSearchFile_Click(object sender, EventArgs e)
 		{
 			string txt = textBoxSearchFile.Text.Trim();
-			Dictionary<long, string> loc;
+			if (string.IsNullOrEmpty(txt)) return;
 
-			EDIHelper helper = new EDIHelper();
-			if (!string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName) && helper.IsEDIFile(FileUtils.CurFileName))
-			{
-				loc = helper.SearchEDIFile(FileUtils.CurFileName, txt);
-			}
-			else
-			{
-				loc = FileUtils.SearchDisplayedText(TextArea.Text, txt);
-			}
+			// Show busy state
+			buttonSearchFile.Enabled = false;
+			buttonSearchFile.Text = "Searching...";
+			this.Cursor = Cursors.WaitCursor;
+			richTextBoxBottom.Clear();
+			richTextBoxBottom.Font = new Font("Consolas", 9);
+			richTextBoxBottom.AppendText("Searching...");
 
+			// Capture values needed by background thread
+			string curFile = FileUtils.CurFileName;
+			string displayedText = TextArea.Text;
+
+			BackgroundWorker bgw = new BackgroundWorker();
+			bgw.DoWork += delegate(object s, DoWorkEventArgs args)
+			{
+				Dictionary<long, string> loc;
+				EDIHelper helper = new EDIHelper();
+				if (!string.IsNullOrEmpty(curFile) && File.Exists(curFile) && helper.IsEDIFile(curFile))
+				{
+					loc = helper.SearchEDIFile(curFile, txt);
+				}
+				else
+				{
+					loc = FileUtils.SearchDisplayedText(displayedText, txt);
+				}
+				args.Result = loc;
+			};
+			bgw.RunWorkerCompleted += delegate(object s, RunWorkerCompletedEventArgs args)
+			{
+				this.Cursor = Cursors.Default;
+				buttonSearchFile.Text = "Search";
+				buttonSearchFile.Enabled = true;
+
+				if (args.Error != null)
+				{
+					richTextBoxBottom.Clear();
+					richTextBoxBottom.AppendText("Search error: " + args.Error.Message);
+					return;
+				}
+
+				Dictionary<long, string> loc = (Dictionary<long, string>)args.Result;
+				DisplaySearchResults(loc);
+			};
+			bgw.RunWorkerAsync();
+		}
+
+		private void DisplaySearchResults(Dictionary<long, string> loc)
+		{
 			richTextBoxBottom.Clear();
 			richTextBoxBottom.Font = new Font("Consolas", 9);
 
@@ -1122,11 +1195,40 @@ namespace ScintillaNET.Demo {
 					// EDI segment result: first number is byte offset, jump to that page
 					string numStr = str.Trim().Split(' ')[0];
 					long loc = long.Parse(numStr);
-					int page = (int)(loc / getLimit());
+					int limit = getLimit();
+					int page = (int)(loc / limit);
 
 					Console.WriteLine(String.Format("EDI Seg double click offset:{0:n0} page:{1:n0}", loc, page));
 
 					buttonJumpToAnyPage(page);
+
+					// Scroll to the matching text within the loaded page
+					string searchText = textBoxSearchFile.Text.Trim();
+					if (!string.IsNullOrEmpty(searchText))
+					{
+						HighlightWord(searchText);
+
+						// Estimate character position within the page from byte offset
+						long pageStartByte = (long)page * limit;
+						int approxCharPos = (int)(loc - pageStartByte);
+						int textLen = TextArea.TextLength;
+						if (approxCharPos >= textLen) approxCharPos = Math.Max(0, textLen - 1);
+
+						// Search near the estimated position first, then fall back to start
+						int searchFrom = Math.Max(0, approxCharPos - 200);
+						int pos = TextArea.Text.IndexOf(searchText, searchFrom, StringComparison.OrdinalIgnoreCase);
+						if (pos < 0)
+							pos = TextArea.Text.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+
+						if (pos >= 0)
+						{
+							int lineIdx = TextArea.LineFromPosition(pos);
+							var linesOnScreen = TextArea.LinesOnScreen;
+							int topLine = Math.Max(0, lineIdx - (linesOnScreen / 2));
+							TextArea.FirstVisibleLine = topLine;
+							TextArea.SetSelection(pos, pos + searchText.Length);
+						}
+					}
 				}
 				else
 				{
@@ -1194,7 +1296,14 @@ namespace ScintillaNET.Demo {
 
 			// Show custom global line numbers on margin 0
 			TextArea.Margins[0].Type = MarginType.RightText;
-			TextArea.Margins[0].Width = 55;
+
+			// Calculate width based on largest line number
+			int maxLineNumber = startingAtLine + TextArea.Lines.Count;
+			string maxText = new string('9', maxLineNumber.ToString().Length);
+			int width = TextArea.TextWidth(Style.LineNumber, maxText) + 16;
+			if (width < 55) width = 55;
+			TextArea.Margins[0].Width = width;
+
 			for (int i = 0; i < TextArea.Lines.Count; i++)
 			{
 				TextArea.Lines[i].MarginStyle = Style.LineNumber;
@@ -1249,6 +1358,7 @@ namespace ScintillaNET.Demo {
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
 			FileUtils.CleanupTempZipDir();
+			FileUtils.CleanupTempEdiDir();
 		}
 
 	}

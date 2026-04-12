@@ -91,7 +91,8 @@ namespace ScintillaNET.Demo.Utils
 
         public static void UpdateClip()
         {
-            Clipboard.SetText(CurFileName);
+            string name = !string.IsNullOrEmpty(OriginalFileName) ? OriginalFileName : CurFileName;
+            Clipboard.SetText(name);
         }
         public static string readNBites(string path, int limit, int offset)
         {
@@ -268,6 +269,8 @@ namespace ScintillaNET.Demo.Utils
 
 
         public static string LastTempZipDir = "";
+        public static string OriginalFileName = "";
+        public static string LastTempEdiDir = "";
 
         public static bool IsZipFile(string path)
         {
@@ -330,6 +333,66 @@ namespace ScintillaNET.Demo.Utils
                     Console.WriteLine("Failed to clean temp dir: " + ex.Message);
                 }
                 LastTempZipDir = "";
+            }
+        }
+
+        public static string UnwrapEdiToTempFile(string sourcePath, char segmentDelimiter)
+        {
+            CleanupTempEdiDir();
+
+            string tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_EDI_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            string tempFile = Path.Combine(tempDir, Path.GetFileName(sourcePath));
+
+            int bufferSize = 131072; // 128KB
+
+            using (StreamReader reader = new StreamReader(sourcePath))
+            using (StreamWriter writer = new StreamWriter(tempFile, false, new UTF8Encoding(false), 65536))
+            {
+                char[] buffer = new char[bufferSize];
+                int charsRead;
+
+                while ((charsRead = reader.Read(buffer, 0, bufferSize)) > 0)
+                {
+                    for (int i = 0; i < charsRead; i++)
+                    {
+                        char c = buffer[i];
+
+                        // Skip existing line breaks
+                        if (c == '\r' || c == '\n')
+                            continue;
+
+                        writer.Write(c);
+
+                        // After segment delimiter, insert newline
+                        if (c == segmentDelimiter)
+                        {
+                            writer.Write(Environment.NewLine);
+                        }
+                    }
+                }
+            }
+
+            LastTempEdiDir = tempDir;
+            Console.WriteLine("Unwrapped EDI to temp: " + tempFile);
+            return tempFile;
+        }
+
+        public static void CleanupTempEdiDir()
+        {
+            if (!string.IsNullOrEmpty(LastTempEdiDir) && Directory.Exists(LastTempEdiDir))
+            {
+                try
+                {
+                    Directory.Delete(LastTempEdiDir, true);
+                    Console.WriteLine("Cleaned up temp EDI dir: " + LastTempEdiDir);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to clean temp EDI dir: " + ex.Message);
+                }
+                LastTempEdiDir = "";
             }
         }
 
