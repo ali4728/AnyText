@@ -54,8 +54,6 @@
             this.wordWrapItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
             this.unWrapXMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.unWrapEDIPartToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.unWrapEDIToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.unWrapFixWidthToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.indentGuidesItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -316,8 +314,6 @@
             this.wordWrapItem,
             this.toolStripSeparator9,
             this.unWrapXMLToolStripMenuItem,
-            this.unWrapEDIPartToolStripMenuItem,
-            this.unWrapEDIToolStripMenuItem,
             this.unWrapFixWidthToolStripMenuItem,
             this.toolStripSeparator6,
             this.indentGuidesItem,
@@ -364,20 +360,6 @@
             this.unWrapXMLToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
             this.unWrapXMLToolStripMenuItem.Text = "UnWrap XML";
             this.unWrapXMLToolStripMenuItem.Click += new System.EventHandler(this.unWrapXMLToolStripMenuItem_Click);
-            // 
-            // unWrapEDIPartToolStripMenuItem
-            // 
-            this.unWrapEDIPartToolStripMenuItem.Name = "unWrapEDIPartToolStripMenuItem";
-            this.unWrapEDIPartToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.unWrapEDIPartToolStripMenuItem.Text = "UnWrap EDI Part";
-            this.unWrapEDIPartToolStripMenuItem.Click += new System.EventHandler(this.unWrapEDIPartToolStripMenuItem_Click);
-            // 
-            // unWrapEDIToolStripMenuItem
-            // 
-            this.unWrapEDIToolStripMenuItem.Name = "unWrapEDIToolStripMenuItem";
-            this.unWrapEDIToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.unWrapEDIToolStripMenuItem.Text = "UnWrap EDI";
-            this.unWrapEDIToolStripMenuItem.Click += new System.EventHandler(this.unWrapEDIToolStripMenuItem_Click);
             // 
             // unWrapFixWidthToolStripMenuItem
             // 
@@ -783,8 +765,6 @@
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemFileName;
         private System.Windows.Forms.ToolStripMenuItem unWrapXMLToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem sQLStyleToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem unWrapEDIToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem unWrapEDIPartToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;

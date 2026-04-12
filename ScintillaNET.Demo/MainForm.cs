@@ -818,16 +818,6 @@ namespace ScintillaNET.Demo {
 
 		}
 
-        private void unWrapEDIToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-			EDIHelper helper = new EDIHelper();
-			if (helper.IsEDIFile(FileUtils.CurFileName))
-			{
-				TextArea.Text = helper.ParseFile(FileUtils.CurFileName);				 
-			}
-		}
-
 		private void saveFileAsToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			SaveFileDialog sfd = new SaveFileDialog();
@@ -848,17 +838,7 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
-		private void unWrapEDIPartToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-			EDIHelper helper = new EDIHelper();
-			if (helper.IsEDIFile(FileUtils.CurFileName))
-			{
-				TextArea.Text = helper.ParseString(TextArea.Text, FileUtils.CurFileName);
-				
-			}
-		}
-
-        private void unWrapFixWidthToolStripMenuItem_Click(object sender, EventArgs e)
+		private void unWrapFixWidthToolStripMenuItem_Click(object sender, EventArgs e)
         {
 			TextArea.Text = FileUtils.getFixWidth(TextArea.Text, 80);
         }
