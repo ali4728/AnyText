@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace ScintillaNET.Demo.Utils
@@ -198,6 +199,72 @@ namespace ScintillaNET.Demo.Utils
             return sb.ToString();
         }
 
+
+        public static string LastTempZipDir = "";
+
+        public static bool IsZipFile(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return false;
+            return path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string ExtractZipToTemp(string zipPath)
+        {
+            CleanupTempZipDir();
+
+            string tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            Type shellAppType = Type.GetTypeFromProgID("Shell.Application");
+            dynamic shell = Activator.CreateInstance(shellAppType);
+            dynamic srcFolder = shell.NameSpace(zipPath);
+            dynamic destFolder = shell.NameSpace(tempDir);
+
+            if (srcFolder == null)
+                throw new InvalidOperationException("Could not open ZIP archive: " + zipPath);
+
+            dynamic items = srcFolder.Items();
+            int expectedCount = items.Count;
+            // 4 = No progress dialog, 16 = Yes to All, 512 = No confirm dir, 1024 = No error UI
+            destFolder.CopyHere(items, 4 | 16 | 512 | 1024);
+
+            // Shell32 CopyHere is async; poll until files appear or timeout
+            int timeout = 30000;
+            int elapsed = 0;
+            while (elapsed < timeout)
+            {
+                Thread.Sleep(200);
+                elapsed += 200;
+                string[] files = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories);
+                if (files.Length >= expectedCount)
+                {
+                    Thread.Sleep(300);
+                    break;
+                }
+            }
+
+            LastTempZipDir = tempDir;
+            Console.WriteLine("Extracted ZIP to: " + tempDir);
+            return tempDir;
+        }
+
+        public static void CleanupTempZipDir()
+        {
+            if (!string.IsNullOrEmpty(LastTempZipDir) && Directory.Exists(LastTempZipDir))
+            {
+                try
+                {
+                    Directory.Delete(LastTempZipDir, true);
+                    Console.WriteLine("Cleaned up temp dir: " + LastTempZipDir);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to clean temp dir: " + ex.Message);
+                }
+                LastTempZipDir = "";
+            }
+        }
 
         public static Dictionary<long, string> SearchFile(string path, string searchString)
         {

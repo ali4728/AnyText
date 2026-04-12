@@ -559,7 +559,7 @@
             // 
             this.openFileDialog.DefaultExt = "txt";
             this.openFileDialog.FileName = "New File";
-            this.openFileDialog.Filter = "All files|*.*";
+            this.openFileDialog.Filter = "All files|*.*|ZIP files|*.zip";
             // 
             // textBoxLimit
             // 
@@ -719,6 +719,7 @@
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.Name = "MainForm";
             this.Text = "AnyText";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();

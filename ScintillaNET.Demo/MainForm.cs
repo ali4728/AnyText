@@ -396,6 +396,49 @@ namespace ScintillaNET.Demo {
 
 			if (File.Exists(path)) 
 			{
+				// Handle ZIP files (case-insensitive: .zip, .ZIP, .Zip, etc.)
+				if (FileUtils.IsZipFile(path))
+				{
+					try
+					{
+						string tempDir = FileUtils.ExtractZipToTemp(path);
+						string[] extractedFiles = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories);
+						if (extractedFiles.Length == 0)
+						{
+							MessageBox.Show("No files found in ZIP archive.", "ZIP Extract", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+							return;
+						}
+
+						string selectedFile;
+						if (extractedFiles.Length == 1)
+						{
+							selectedFile = extractedFiles[0];
+						}
+						else
+						{
+							OpenFileDialog zipPicker = new OpenFileDialog();
+							zipPicker.InitialDirectory = tempDir;
+							zipPicker.Title = "Select a file from the ZIP archive";
+							zipPicker.Filter = "All files|*.*";
+							if (zipPicker.ShowDialog() == DialogResult.OK)
+							{
+								selectedFile = zipPicker.FileName;
+							}
+							else
+							{
+								return;
+							}
+						}
+
+						LoadDataFromFile(selectedFile);
+					}
+					catch (Exception ex)
+					{
+						MessageBox.Show("Failed to extract ZIP file: " + ex.Message, "ZIP Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					}
+					return;
+				}
+
 				FileInfo fi = new FileInfo(path);
 				long fileSize = fi.Length;
 				FileUtils.fileSize = fileSize;
@@ -745,8 +788,22 @@ namespace ScintillaNET.Demo {
 
 		private void saveFileAsToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			EDIHelper helper = new EDIHelper();
-			helper.SaveFile(FileUtils.CurFileName, TextArea.Text);
+			SaveFileDialog sfd = new SaveFileDialog();
+			sfd.Filter = "All files|*.*|Text files|*.txt|EDI files|*.edi|XML files|*.xml";
+			sfd.Title = "Save File As";
+
+			if (!string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName))
+			{
+				sfd.InitialDirectory = Path.GetDirectoryName(FileUtils.CurFileName);
+				string fnWoExt = Path.GetFileNameWithoutExtension(FileUtils.CurFileName);
+				string fExt = Path.GetExtension(FileUtils.CurFileName);
+				sfd.FileName = fnWoExt + "_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + fExt;
+			}
+
+			if (sfd.ShowDialog() == DialogResult.OK)
+			{
+				File.WriteAllText(sfd.FileName, TextArea.Text);
+			}
 		}
 
 		private void unWrapEDIPartToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1118,8 +1175,13 @@ namespace ScintillaNET.Demo {
         //		UpdateLineNumbers(TextArea.LineFromPosition(e.Position));
         //}
 
-        #endregion
+		#endregion
 
 
-    }
+		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+		{
+			FileUtils.CleanupTempZipDir();
+		}
+
+	}
 }
