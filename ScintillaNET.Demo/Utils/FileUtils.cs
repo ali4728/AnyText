@@ -55,7 +55,14 @@ namespace ScintillaNET.Demo.Utils
 
                     if (n > 0)
                     {
-                        str = System.Text.Encoding.Default.GetString(bytes);
+                        var utf8NoBom = new UTF8Encoding(false);
+                        str = utf8NoBom.GetString(bytes, 0, n);
+
+                        // Strip UTF-8 BOM character if present on first page
+                        if (offset == 0 && str.Length > 0 && str[0] == '\uFEFF')
+                        {
+                            str = str.Substring(1);
+                        }
 
                         #region check_if_line_numbers_exist
                         if (offset == 0) //if reading first junk of file check if file has line numbers
@@ -120,38 +127,75 @@ namespace ScintillaNET.Demo.Utils
 
         public static string UnWrapXML(string textValue)
         {
-            char curChar;
-            char nextChar;
-            var sb = new StringBuilder();
+            if (string.IsNullOrEmpty(textValue))
+                return textValue;
 
-            byte[] byteArray = Encoding.UTF8.GetBytes(textValue);
+            var sb = new StringBuilder(textValue.Length + (textValue.Length / 4));
+            int indent = 0;
+            int i = 0;
+            int len = textValue.Length;
 
-            using (StreamReader sr = new StreamReader(new MemoryStream(byteArray)))
+            while (i < len)
             {
-                while (sr.Peek() >= 0)
+                if (textValue[i] == '<')
                 {
-                    //if (sr.Peek() == 13) { sr.Read(); } //advance CR
-                    //if (sr.Peek() == 10) { sr.Read(); } //advance LF
-
-                    curChar = (char)sr.Read();
-                    nextChar = (char)sr.Peek();
-                    if (curChar == '>' && nextChar == '<')
+                    int tagEnd = textValue.IndexOf('>', i);
+                    if (tagEnd == -1)
                     {
-                        sb.Append(curChar);
+                        sb.Append(textValue, i, len - i);
+                        break;
+                    }
+
+                    string tag = textValue.Substring(i, tagEnd - i + 1);
+
+                    bool isClosing = tag.Length > 1 && tag[1] == '/';
+                    bool isSelfClosing = tag.Length > 1 && tag[tag.Length - 2] == '/';
+                    bool isDeclaration = tag.Length > 1 && (tag[1] == '?' || tag[1] == '!');
+
+                    if (isClosing)
+                    {
+                        indent = Math.Max(0, indent - 1);
+                    }
+
+                    if (sb.Length > 0)
+                    {
                         sb.Append(Environment.NewLine);
                     }
-                    else
+
+                    for (int t = 0; t < indent; t++)
                     {
-                        sb.Append(curChar);
+                        sb.Append("  ");
                     }
 
-                }
+                    sb.Append(tag);
 
+                    if (!isClosing && !isSelfClosing && !isDeclaration)
+                    {
+                        indent++;
+                    }
+
+                    i = tagEnd + 1;
+                }
+                else
+                {
+                    int nextTag = textValue.IndexOf('<', i);
+                    if (nextTag == -1)
+                    {
+                        sb.Append(textValue, i, len - i);
+                        break;
+                    }
+
+                    string text = textValue.Substring(i, nextTag - i).Trim();
+                    if (text.Length > 0)
+                    {
+                        sb.Append(text);
+                    }
+
+                    i = nextTag;
+                }
             }
 
             return sb.ToString();
-
-
         }
 
 

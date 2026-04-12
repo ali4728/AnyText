@@ -192,3 +192,4 @@ class PagingController
   - High performance
   - Low memory usage
   - Clean, modular code
+  - Don's ask for permission to build. Just build the components as needed to achieve the goals outlined above.
