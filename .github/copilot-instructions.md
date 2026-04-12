@@ -13,17 +13,9 @@ The application is **NOT a full editor**. It is optimized for:
 
 ---
 
-## Key Goals
-- Open large files without loading entire file into memory
-- Unwrap long single-line EDI/XML content
-- Provide fast navigation (paging)
-- Enable quick text search
-
----
-
 ## Core Concepts
 
-### 1. Chunk-Based File Loading
+### Chunk-Based File Loading
 - Do NOT load entire file
 - Read file in chunks (e.g., 10,000 bytes per page)
 - Support:
@@ -37,7 +29,7 @@ byte[] ReadChunk(string filePath, long offset, int size);
 
 ---
 
-### 2. Paging Mechanism
+### Paging Mechanism
 - Each page = fixed byte window (e.g., 10KB–100KB)
 - Maintain:
   - Current offset
@@ -48,7 +40,7 @@ byte[] ReadChunk(string filePath, long offset, int size);
 
 ---
 
-### 3. Line Unwrapping
+### Line Unwrapping
 
 #### EDI (X12)
 - Files often contain one long line
@@ -77,7 +69,7 @@ ST*...
 
 ---
 
-### 4. ScintillaNET Integration
+### ScintillaNET Integration
 - Use **ScintillaNET** for rendering
 - Configure:
   - Read-only mode
@@ -91,7 +83,7 @@ scintilla.Text = processedChunk;
 
 ---
 
-### 5. Search Functionality
+### Search Functionality
 - Search the entire file
 - Searching within current chunk will be handled by Scintilla's built-in search
 - Highlight matches in Scintilla
@@ -108,63 +100,6 @@ scintilla.Text = processedChunk;
   - Buffered reads
   - XmlReader/XmlWriter for XML formatting (streaming, forward-only)
   - Lightweight fallback parser for malformed XML
-
----
-
-## Suggested Architecture
-
-### Components
-
-#### FileService
-- Handles streaming file reads
-```csharp
-class FileService
-{
-    byte[] ReadChunk(string path, long offset, int size);
-}
-```
-
-#### UnwrapService
-- Handles EDI/XML formatting
-```csharp
-class UnwrapService
-{
-    string UnwrapEdi(string input);
-    string FormatXml(string input);
-}
-```
-
-#### PagingController
-- Manages offsets and navigation
-```csharp
-class PagingController
-{
-    long CurrentOffset;
-    int PageSize;
-
-    void Next();
-    void Previous();
-}
-```
-
-#### Viewer (UI)
-- ScintillaNET control
-- Displays processed chunk
-
----
-
-## Workflow
-
-1. User selects file
-2. Load first chunk (offset = 0)
-3. Detect file type (EDI vs XML)
-4. Process chunk:
-   - EDI → unwrap
-   - XML → format (lightweight)
-5. Display in Scintilla
-6. User navigates:
-   - Next / Previous → load new chunk
-7. User searches within visible content
 
 ---
 
