@@ -87,6 +87,7 @@
             this.richTextBoxBottom = new System.Windows.Forms.RichTextBox();
             this.textBoxSearchFile = new System.Windows.Forms.TextBox();
             this.buttonSearchFile = new System.Windows.Forms.Button();
+            this.buttonCountFile = new System.Windows.Forms.Button();
             this.saveFileAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparatorTemp = new System.Windows.Forms.ToolStripSeparator();
             this.copyTempPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -677,6 +678,16 @@
             this.buttonSearchFile.UseVisualStyleBackColor = true;
             this.buttonSearchFile.Click += new System.EventHandler(this.buttonSearchFile_Click);
             // 
+            // buttonCountFile
+            // 
+            this.buttonCountFile.Location = new System.Drawing.Point(611, 43);
+            this.buttonCountFile.Name = "buttonCountFile";
+            this.buttonCountFile.Size = new System.Drawing.Size(75, 23);
+            this.buttonCountFile.TabIndex = 22;
+            this.buttonCountFile.Text = "Count";
+            this.buttonCountFile.UseVisualStyleBackColor = true;
+            this.buttonCountFile.Click += new System.EventHandler(this.buttonCountFile_Click);
+            // 
             // saveFileAsToolStripMenuItem
             // 
             this.saveFileAsToolStripMenuItem.Name = "saveFileAsToolStripMenuItem";
@@ -716,6 +727,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(964, 761);
+            this.Controls.Add(this.buttonCountFile);
             this.Controls.Add(this.buttonSearchFile);
             this.Controls.Add(this.textBoxSearchFile);
             this.Controls.Add(this.buttonJumpTo);
@@ -816,6 +828,7 @@
         private System.Windows.Forms.RichTextBox richTextBoxBottom;
         private System.Windows.Forms.TextBox textBoxSearchFile;
         private System.Windows.Forms.Button buttonSearchFile;
+        private System.Windows.Forms.Button buttonCountFile;
         private System.Windows.Forms.ToolStripMenuItem saveFileAsToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorTemp;
         private System.Windows.Forms.ToolStripMenuItem copyTempPathToolStripMenuItem;

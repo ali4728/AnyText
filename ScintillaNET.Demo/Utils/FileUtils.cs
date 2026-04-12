@@ -575,5 +575,44 @@ namespace ScintillaNET.Demo.Utils
 
             return loc;
         }
+
+        public static long CountInFile(string path, string searchString)
+        {
+            if (string.IsNullOrEmpty(searchString) || !File.Exists(path))
+                return 0;
+
+            long count = 0;
+            int bufferSize = 131072; // 128KB
+            var utf8 = new UTF8Encoding(false);
+            int overlapSize = searchString.Length - 1;
+
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                byte[] buffer = new byte[bufferSize];
+                string leftover = "";
+                int bytesRead;
+
+                while ((bytesRead = fs.Read(buffer, 0, bufferSize)) > 0)
+                {
+                    string chunk = leftover + utf8.GetString(buffer, 0, bytesRead);
+                    int idx = 0;
+
+                    while ((idx = chunk.IndexOf(searchString, idx, StringComparison.OrdinalIgnoreCase)) >= 0)
+                    {
+                        count++;
+                        idx += 1;
+                    }
+
+                    // Keep overlap to catch matches spanning chunk boundaries
+                    if (chunk.Length > overlapSize)
+                        leftover = chunk.Substring(chunk.Length - overlapSize);
+                    else
+                        leftover = chunk;
+                }
+            }
+
+            Console.WriteLine(String.Format("Count in file: {0:n0}", count));
+            return count;
+        }
     }
 }

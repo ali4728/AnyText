@@ -1135,6 +1135,56 @@ namespace ScintillaNET.Demo {
 			bgw.RunWorkerAsync();
 		}
 
+		private void buttonCountFile_Click(object sender, EventArgs e)
+		{
+			string txt = textBoxSearchFile.Text.Trim();
+			if (string.IsNullOrEmpty(txt)) return;
+
+			buttonCountFile.Enabled = false;
+			buttonCountFile.Text = "Counting...";
+			this.Cursor = Cursors.WaitCursor;
+			richTextBoxBottom.Clear();
+			richTextBoxBottom.Font = new Font("Consolas", 9);
+			richTextBoxBottom.AppendText("Counting...");
+
+			string curFile = FileUtils.CurFileName;
+
+			BackgroundWorker bgw = new BackgroundWorker();
+			bgw.DoWork += delegate(object s, DoWorkEventArgs args)
+			{
+				long count = FileUtils.CountInFile(curFile, txt);
+				args.Result = count;
+			};
+			bgw.RunWorkerCompleted += delegate(object s, RunWorkerCompletedEventArgs args)
+			{
+				this.Cursor = Cursors.Default;
+				buttonCountFile.Text = "Count";
+				buttonCountFile.Enabled = true;
+
+				if (args.Error != null)
+				{
+					richTextBoxBottom.Clear();
+					richTextBoxBottom.AppendText("Count error: " + args.Error.Message);
+					return;
+				}
+
+				long count = (long)args.Result;
+				richTextBoxBottom.Clear();
+				richTextBoxBottom.Font = new Font("Consolas", 9);
+				if (count == 0)
+				{
+					richTextBoxBottom.SelectionColor = Color.Red;
+					richTextBoxBottom.AppendText("No \"" + txt + "\" found.");
+					richTextBoxBottom.SelectionColor = richTextBoxBottom.ForeColor;
+				}
+				else
+				{
+					richTextBoxBottom.AppendText(String.Format("Found {0:n0} occurrence(s) of \"{1}\"", count, txt));
+				}
+			};
+			bgw.RunWorkerAsync();
+		}
+
 		private void DisplaySearchResults(Dictionary<long, string> loc)
 		{
 			richTextBoxBottom.Clear();
