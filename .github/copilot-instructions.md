@@ -1,7 +1,7 @@
 # Large EDI/XML Viewer (C# + ScintillaNET)
 
 ## Overview
-A Windows desktop **read-only viewer** for very large files (500MB–1GB), specifically:
+A Windows desktop **read-only viewer** for very large files (500MB–2GB), specifically:
 - X12 EDI files (e.g., 837I, 834)
 - XML files
 
@@ -99,13 +99,15 @@ scintilla.Text = processedChunk;
 ---
 
 ## Performance Requirements
-- Must handle files up to ~1GB
+- Must handle files up to ~2GB
 - Avoid:
   - Full file reads
   - Large string concatenations
 - Use:
   - FileStream
   - Buffered reads
+  - XmlReader/XmlWriter for XML formatting (streaming, forward-only)
+  - Lightweight fallback parser for malformed XML
 
 ---
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml;
 
 namespace ScintillaNET.Demo.Utils
 {
@@ -308,6 +309,87 @@ namespace ScintillaNET.Demo.Utils
             string ext = Path.GetExtension(sourcePath);
             string tempFile = Path.Combine(tempDir, nameWithoutExt + "_unwrapped" + ext);
 
+            // Try XmlReader/XmlWriter first (handles well-formed XML properly)
+            try
+            {
+                UnwrapXmlWithXmlReader(sourcePath, tempFile);
+                Console.WriteLine("Unwrapped XML (XmlReader) to temp: " + tempFile + (reusingZipDir ? " (reused ZIP dir)" : ""));
+            }
+            catch (Exception ex)
+            {
+                // Fall back to lightweight parser for malformed XML
+                Console.WriteLine("XmlReader failed (" + ex.Message + "), falling back to lightweight parser");
+                UnwrapXmlLightweight(sourcePath, tempFile);
+                Console.WriteLine("Unwrapped XML (lightweight) to temp: " + tempFile + (reusingZipDir ? " (reused ZIP dir)" : ""));
+            }
+
+            return tempFile;
+        }
+
+        private static void UnwrapXmlWithXmlReader(string sourcePath, string tempFile)
+        {
+            var readerSettings = new XmlReaderSettings();
+            readerSettings.DtdProcessing = DtdProcessing.Ignore;
+            readerSettings.IgnoreWhitespace = true;
+
+            var writerSettings = new XmlWriterSettings();
+            writerSettings.Indent = true;
+            writerSettings.IndentChars = "  ";
+            writerSettings.Encoding = new UTF8Encoding(false);
+            writerSettings.OmitXmlDeclaration = false;
+
+            using (XmlReader reader = XmlReader.Create(sourcePath, readerSettings))
+            using (XmlWriter writer = XmlWriter.Create(tempFile, writerSettings))
+            {
+                while (reader.Read())
+                {
+                    switch (reader.NodeType)
+                    {
+                        case XmlNodeType.Element:
+                            writer.WriteStartElement(reader.Prefix, reader.LocalName, reader.NamespaceURI);
+                            if (reader.HasAttributes)
+                            {
+                                while (reader.MoveToNextAttribute())
+                                {
+                                    if (reader.Prefix == "xmlns" || (reader.Prefix == "" && reader.LocalName == "xmlns"))
+                                        writer.WriteAttributeString(reader.Prefix, reader.LocalName, reader.NamespaceURI, reader.Value);
+                                    else
+                                        writer.WriteAttributeString(reader.Prefix, reader.LocalName, reader.NamespaceURI, reader.Value);
+                                }
+                                reader.MoveToElement();
+                            }
+                            if (reader.IsEmptyElement)
+                                writer.WriteEndElement();
+                            break;
+                        case XmlNodeType.EndElement:
+                            writer.WriteFullEndElement();
+                            break;
+                        case XmlNodeType.Text:
+                            writer.WriteString(reader.Value);
+                            break;
+                        case XmlNodeType.CDATA:
+                            writer.WriteCData(reader.Value);
+                            break;
+                        case XmlNodeType.Comment:
+                            writer.WriteComment(reader.Value);
+                            break;
+                        case XmlNodeType.ProcessingInstruction:
+                            writer.WriteProcessingInstruction(reader.Name, reader.Value);
+                            break;
+                        case XmlNodeType.XmlDeclaration:
+                            writer.WriteProcessingInstruction(reader.Name, reader.Value);
+                            break;
+                        case XmlNodeType.Whitespace:
+                        case XmlNodeType.SignificantWhitespace:
+                            writer.WriteWhitespace(reader.Value);
+                            break;
+                    }
+                }
+            }
+        }
+
+        private static void UnwrapXmlLightweight(string sourcePath, string tempFile)
+        {
             int bufferSize = 131072; // 128KB
             string newLine = Environment.NewLine;
 
@@ -318,9 +400,8 @@ namespace ScintillaNET.Demo.Utils
                 int charsRead;
                 int indent = 0;
                 bool insideTag = false;
-                bool tagIsClosing = false;
-                bool tagIsSelfClosing = false;
-                bool tagIsDeclaration = false;
+                bool insideQuote = false;
+                char quoteChar = '"';
                 StringBuilder tagBuffer = new StringBuilder(256);
                 StringBuilder textBuffer = new StringBuilder(256);
                 bool isFirstTag = true;
@@ -334,52 +415,61 @@ namespace ScintillaNET.Demo.Utils
                         if (c == '\r' || c == '\n')
                             continue;
 
-                        if (c == '<')
+                        if (insideTag)
+                        {
+                            tagBuffer.Append(c);
+
+                            // Track quotes so '>' inside attributes is ignored
+                            if (!insideQuote && (c == '"' || c == '\''))
+                            {
+                                insideQuote = true;
+                                quoteChar = c;
+                            }
+                            else if (insideQuote && c == quoteChar)
+                            {
+                                insideQuote = false;
+                            }
+                            else if (c == '>' && !insideQuote)
+                            {
+                                string tag = tagBuffer.ToString();
+                                insideTag = false;
+
+                                bool tagIsClosing = tag.Length > 1 && tag[1] == '/';
+                                bool tagIsSelfClosing = tag.Length > 1 && tag[tag.Length - 2] == '/';
+                                bool tagIsDeclaration = tag.Length > 1 && (tag[1] == '?' || tag[1] == '!');
+
+                                if (tagIsClosing)
+                                    indent = Math.Max(0, indent - 1);
+
+                                if (!isFirstTag)
+                                    writer.Write(newLine);
+                                isFirstTag = false;
+
+                                for (int t = 0; t < indent; t++)
+                                    writer.Write("  ");
+
+                                writer.Write(tag);
+
+                                if (!tagIsClosing && !tagIsSelfClosing && !tagIsDeclaration)
+                                    indent++;
+
+                                tagBuffer.Length = 0;
+                            }
+                        }
+                        else if (c == '<')
                         {
                             // Flush any text content before tag
                             if (textBuffer.Length > 0)
                             {
                                 string text = textBuffer.ToString().Trim();
                                 if (text.Length > 0)
-                                {
                                     writer.Write(text);
-                                }
                                 textBuffer.Length = 0;
                             }
 
                             insideTag = true;
+                            insideQuote = false;
                             tagBuffer.Length = 0;
-                            tagBuffer.Append(c);
-                        }
-                        else if (c == '>' && insideTag)
-                        {
-                            tagBuffer.Append(c);
-                            string tag = tagBuffer.ToString();
-                            insideTag = false;
-
-                            tagIsClosing = tag.Length > 1 && tag[1] == '/';
-                            tagIsSelfClosing = tag.Length > 1 && tag[tag.Length - 2] == '/';
-                            tagIsDeclaration = tag.Length > 1 && (tag[1] == '?' || tag[1] == '!');
-
-                            if (tagIsClosing)
-                                indent = Math.Max(0, indent - 1);
-
-                            if (!isFirstTag)
-                                writer.Write(newLine);
-                            isFirstTag = false;
-
-                            for (int t = 0; t < indent; t++)
-                                writer.Write("  ");
-
-                            writer.Write(tag);
-
-                            if (!tagIsClosing && !tagIsSelfClosing && !tagIsDeclaration)
-                                indent++;
-
-                            tagBuffer.Length = 0;
-                        }
-                        else if (insideTag)
-                        {
                             tagBuffer.Append(c);
                         }
                         else
@@ -389,17 +479,20 @@ namespace ScintillaNET.Demo.Utils
                     }
                 }
 
-                // Flush remaining
+                // Flush remaining text
                 if (textBuffer.Length > 0)
                 {
                     string text = textBuffer.ToString().Trim();
                     if (text.Length > 0)
                         writer.Write(text);
                 }
+                // Flush unclosed tag (malformed)
+                if (tagBuffer.Length > 0)
+                {
+                    writer.Write(newLine);
+                    writer.Write(tagBuffer.ToString());
+                }
             }
-
-            Console.WriteLine("Unwrapped XML to temp: " + tempFile + (reusingZipDir ? " (reused ZIP dir)" : ""));
-            return tempFile;
         }
 
         public static string ExtractZipToTemp(string zipPath)
