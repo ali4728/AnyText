@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using System.Diagnostics;
 using ScintillaNET;
 using ScintillaNET.Demo.Utils;
 
@@ -434,7 +435,11 @@ namespace ScintillaNET.Demo {
 							}
 						}
 
+						// Preserve original ZIP path so title bar shows it
+						FileUtils.OriginalFileName = path;
 						LoadDataFromFile(selectedFile);
+						// Ensure original ZIP path stays set after recursive load
+						FileUtils.OriginalFileName = path;
 					}
 					catch (Exception ex)
 					{
@@ -452,7 +457,13 @@ namespace ScintillaNET.Demo {
 				int totPages = (int)(FileUtils.fileSize / getLimit());
 				labelTotals.Text = totPages.ToString(); 
 
-				this.Text = path;
+				// Show original file name in title bar, not temp path
+				string displayName = path;
+				if (!string.IsNullOrEmpty(FileUtils.OriginalFileName))
+					displayName = FileUtils.OriginalFileName;
+				else if (!string.IsNullOrEmpty(FileUtils.LastTempZipDir) && path.StartsWith(FileUtils.LastTempZipDir, StringComparison.OrdinalIgnoreCase))
+					displayName = Path.GetFileName(path);
+				this.Text = displayName;
 
 
 				try
@@ -835,6 +846,38 @@ namespace ScintillaNET.Demo {
 			if (sfd.ShowDialog() == DialogResult.OK)
 			{
 				File.WriteAllText(sfd.FileName, TextArea.Text);
+			}
+		}
+
+		private void copyTempPathToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			string tempPath = FileUtils.CurFileName;
+			if (!string.IsNullOrEmpty(tempPath) && File.Exists(tempPath))
+			{
+				Clipboard.SetText(tempPath);
+				Console.WriteLine("Copied temp path: " + tempPath);
+			}
+			else
+			{
+				MessageBox.Show("No temp file in use.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			}
+		}
+
+		private void openTempFolderToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			string tempDir = "";
+			if (!string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName))
+			{
+				tempDir = Path.GetDirectoryName(FileUtils.CurFileName);
+			}
+
+			if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+			{
+				Process.Start("explorer.exe", tempDir);
+			}
+			else
+			{
+				MessageBox.Show("No temp folder in use.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
 			}
 		}
 

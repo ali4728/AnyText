@@ -88,6 +88,9 @@
             this.textBoxSearchFile = new System.Windows.Forms.TextBox();
             this.buttonSearchFile = new System.Windows.Forms.Button();
             this.saveFileAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparatorTemp = new System.Windows.Forms.ToolStripSeparator();
+            this.copyTempPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openTempFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.PanelSearch.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -329,7 +332,10 @@
             this.sQLStyleToolStripMenuItem,
             this.syntaxXMLToolStripMenuItem,
             this.syntaxPlainToolStripMenuItem,
-            this.saveFileAsToolStripMenuItem});
+            this.saveFileAsToolStripMenuItem,
+            this.toolStripSeparatorTemp,
+            this.copyTempPathToolStripMenuItem,
+            this.openTempFolderToolStripMenuItem});
             this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
             this.viewToolStripMenuItem.Size = new System.Drawing.Size(50, 23);
             this.viewToolStripMenuItem.Text = "View";
@@ -676,6 +682,25 @@
             this.saveFileAsToolStripMenuItem.Text = "Save File As";
             this.saveFileAsToolStripMenuItem.Click += new System.EventHandler(this.saveFileAsToolStripMenuItem_Click);
             // 
+            // toolStripSeparatorTemp
+            // 
+            this.toolStripSeparatorTemp.Name = "toolStripSeparatorTemp";
+            this.toolStripSeparatorTemp.Size = new System.Drawing.Size(218, 6);
+            // 
+            // copyTempPathToolStripMenuItem
+            // 
+            this.copyTempPathToolStripMenuItem.Name = "copyTempPathToolStripMenuItem";
+            this.copyTempPathToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.copyTempPathToolStripMenuItem.Text = "Copy Temp File Path";
+            this.copyTempPathToolStripMenuItem.Click += new System.EventHandler(this.copyTempPathToolStripMenuItem_Click);
+            // 
+            // openTempFolderToolStripMenuItem
+            // 
+            this.openTempFolderToolStripMenuItem.Name = "openTempFolderToolStripMenuItem";
+            this.openTempFolderToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.openTempFolderToolStripMenuItem.Text = "Open Temp Folder";
+            this.openTempFolderToolStripMenuItem.Click += new System.EventHandler(this.openTempFolderToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -783,6 +808,9 @@
         private System.Windows.Forms.TextBox textBoxSearchFile;
         private System.Windows.Forms.Button buttonSearchFile;
         private System.Windows.Forms.ToolStripMenuItem saveFileAsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparatorTemp;
+        private System.Windows.Forms.ToolStripMenuItem copyTempPathToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem openTempFolderToolStripMenuItem;
     }
 }
 
