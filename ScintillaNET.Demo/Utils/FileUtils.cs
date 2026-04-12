@@ -338,12 +338,27 @@ namespace ScintillaNET.Demo.Utils
 
         public static string UnwrapEdiToTempFile(string sourcePath, char segmentDelimiter)
         {
-            CleanupTempEdiDir();
+            string tempDir;
+            bool reusingZipDir = false;
 
-            string tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_EDI_" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDir);
+            // If source is already in the ZIP temp directory, reuse it
+            if (!string.IsNullOrEmpty(LastTempZipDir) && sourcePath.StartsWith(LastTempZipDir, StringComparison.OrdinalIgnoreCase))
+            {
+                tempDir = LastTempZipDir;
+                reusingZipDir = true;
+            }
+            else
+            {
+                CleanupTempEdiDir();
+                tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_EDI_" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(tempDir);
+                LastTempEdiDir = tempDir;
+            }
 
-            string tempFile = Path.Combine(tempDir, Path.GetFileName(sourcePath));
+            // Use _unwrapped suffix to avoid overwriting the source file
+            string nameWithoutExt = Path.GetFileNameWithoutExtension(sourcePath);
+            string ext = Path.GetExtension(sourcePath);
+            string tempFile = Path.Combine(tempDir, nameWithoutExt + "_unwrapped" + ext);
 
             int bufferSize = 131072; // 128KB
 
@@ -374,8 +389,7 @@ namespace ScintillaNET.Demo.Utils
                 }
             }
 
-            LastTempEdiDir = tempDir;
-            Console.WriteLine("Unwrapped EDI to temp: " + tempFile);
+            Console.WriteLine("Unwrapped EDI to temp: " + tempFile + (reusingZipDir ? " (reused ZIP dir)" : ""));
             return tempFile;
         }
 
