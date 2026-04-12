@@ -62,6 +62,15 @@ namespace ScintillaNET.Demo
             return sb.ToString();
         }
 
+        public void SaveFile(string filePath, string content)
+        {
+            string fnWoExt = Path.GetFileNameWithoutExtension(filePath);
+            string fExt = Path.GetExtension(filePath);
+            string outputpath = Path.GetDirectoryName(filePath);
+            string newFileName = outputpath + "\\" + fnWoExt + "_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + fExt;
+            File.WriteAllText(newFileName, content);
+        }
+
         public string ParseString(string textValue, string filePath)
         {
             Delimeters del = new Delimeters(filePath);

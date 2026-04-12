@@ -89,6 +89,7 @@
             this.richTextBoxBottom = new System.Windows.Forms.RichTextBox();
             this.textBoxSearchFile = new System.Windows.Forms.TextBox();
             this.buttonSearchFile = new System.Windows.Forms.Button();
+            this.saveFileAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.PanelSearch.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -331,7 +332,8 @@
             this.toolStripSeparator8,
             this.sQLStyleToolStripMenuItem,
             this.syntaxXMLToolStripMenuItem,
-            this.syntaxPlainToolStripMenuItem});
+            this.syntaxPlainToolStripMenuItem,
+            this.saveFileAsToolStripMenuItem});
             this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
             this.viewToolStripMenuItem.Size = new System.Drawing.Size(50, 23);
             this.viewToolStripMenuItem.Text = "View";
@@ -685,6 +687,13 @@
             this.buttonSearchFile.UseVisualStyleBackColor = true;
             this.buttonSearchFile.Click += new System.EventHandler(this.buttonSearchFile_Click);
             // 
+            // saveFileAsToolStripMenuItem
+            // 
+            this.saveFileAsToolStripMenuItem.Name = "saveFileAsToolStripMenuItem";
+            this.saveFileAsToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.saveFileAsToolStripMenuItem.Text = "Save File As";
+            this.saveFileAsToolStripMenuItem.Click += new System.EventHandler(this.saveFileAsToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -792,6 +801,7 @@
         private System.Windows.Forms.RichTextBox richTextBoxBottom;
         private System.Windows.Forms.TextBox textBoxSearchFile;
         private System.Windows.Forms.Button buttonSearchFile;
+        private System.Windows.Forms.ToolStripMenuItem saveFileAsToolStripMenuItem;
     }
 }
 

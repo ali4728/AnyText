@@ -743,7 +743,13 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
-        private void unWrapEDIPartToolStripMenuItem_Click(object sender, EventArgs e)
+		private void saveFileAsToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			EDIHelper helper = new EDIHelper();
+			helper.SaveFile(FileUtils.CurFileName, TextArea.Text);
+		}
+
+		private void unWrapEDIPartToolStripMenuItem_Click(object sender, EventArgs e)
         {
 			EDIHelper helper = new EDIHelper();
 			if (helper.IsEDIFile(FileUtils.CurFileName))
@@ -849,6 +855,7 @@ namespace ScintillaNET.Demo {
 					{
 						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
 						textBoxPage.Text = page.ToString();
+						//UpdateLineNumbers(100); TESTING ONLY 
 					}
 
 				}
@@ -1043,5 +1050,38 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
-	}
+
+        #region custom_line_numbers
+        private void UpdateLineNumbers(int startingAtLine)
+		{
+			TextArea.Margins[0].Type = MarginType.RightText;
+			TextArea.Margins[0].Width = 35;
+			// Starting at the specified line index, update each
+			// subsequent line margin text with a hex line number.
+			for (int i = 0; i < TextArea.Lines.Count; i++)
+			{
+				TextArea.Lines[i].MarginStyle = Style.LineNumber;
+				TextArea.Lines[i].MarginText = (i+startingAtLine).ToString();
+			}
+		}
+
+
+        //private void scintilla_Insert(object sender, ModificationEventArgs e)
+        //{
+        //	// Only update line numbers if the number of lines changed
+        //	if (e.LinesAdded != 0)
+        //		UpdateLineNumbers(TextArea.LineFromPosition(e.Position));
+        //}
+
+        //private void scintilla_Delete(object sender, ModificationEventArgs e)
+        //{
+        //	// Only update line numbers if the number of lines changed
+        //	if (e.LinesAdded != 0)
+        //		UpdateLineNumbers(TextArea.LineFromPosition(e.Position));
+        //}
+
+        #endregion
+
+
+    }
 }
