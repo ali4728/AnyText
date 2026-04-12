@@ -16,6 +16,73 @@ namespace ScintillaNET.Demo.Utils
         public static bool fileHasLineBreaks = false;
         public static int GCTrigger = 0;
         //public static int bytesPerPage = 100000;
+
+        public static int[] LineOffsetIndex = null;
+        private static int LineCheckpointInterval = 65536; // 64KB
+
+        public static void BuildLineIndex(string path)
+        {
+            LineOffsetIndex = null;
+            if (!File.Exists(path)) return;
+            long fileSz = new FileInfo(path).Length;
+            int numCheckpoints = (int)(fileSz / LineCheckpointInterval) + 1;
+            int[] index = new int[numCheckpoints];
+            int lineCount = 1;
+            int checkpointIdx = 0;
+            index[0] = 1;
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                byte[] buffer = new byte[LineCheckpointInterval];
+                int bytesRead;
+                while ((bytesRead = fs.Read(buffer, 0, LineCheckpointInterval)) > 0)
+                {
+                    for (int i = 0; i < bytesRead; i++)
+                    {
+                        if (buffer[i] == 10) lineCount++;
+                    }
+                    checkpointIdx++;
+                    if (checkpointIdx < numCheckpoints)
+                    {
+                        index[checkpointIdx] = lineCount;
+                    }
+                }
+            }
+            LineOffsetIndex = index;
+            Console.WriteLine(String.Format("Line index built: {0:n0} checkpoints, {1:n0} total lines", numCheckpoints, lineCount));
+        }
+
+        public static int GetLineNumberAtOffset(string path, long offset)
+        {
+            if (offset == 0) return 1;
+            if (LineOffsetIndex == null || LineOffsetIndex.Length == 0) return 1;
+            int checkpointIdx = (int)(offset / LineCheckpointInterval);
+            if (checkpointIdx >= LineOffsetIndex.Length)
+                checkpointIdx = LineOffsetIndex.Length - 1;
+            int lineNumber = LineOffsetIndex[checkpointIdx];
+            long checkpointOffset = (long)checkpointIdx * LineCheckpointInterval;
+            if (checkpointOffset < offset && File.Exists(path))
+            {
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+                {
+                    fs.Seek(checkpointOffset, SeekOrigin.Begin);
+                    long remaining = offset - checkpointOffset;
+                    byte[] buffer = new byte[(int)Math.Min(remaining, LineCheckpointInterval)];
+                    while (remaining > 0)
+                    {
+                        int toRead = (int)Math.Min(remaining, buffer.Length);
+                        int bytesRead = fs.Read(buffer, 0, toRead);
+                        if (bytesRead == 0) break;
+                        for (int i = 0; i < bytesRead; i++)
+                        {
+                            if (buffer[i] == 10) lineNumber++;
+                        }
+                        remaining -= bytesRead;
+                    }
+                }
+            }
+            return lineNumber;
+        }
+
         public static string readAllFile(string path)
         {
             return File.ReadAllText(path);

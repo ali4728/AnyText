@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -69,6 +70,82 @@ namespace ScintillaNET.Demo
             string outputpath = Path.GetDirectoryName(filePath);
             string newFileName = outputpath + "\\" + fnWoExt + "_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + fExt;
             File.WriteAllText(newFileName, content);
+        }
+
+        public Dictionary<long, string> SearchEDIFile(string filePath, string searchString, int maxResults = 10000)
+        {
+            Dictionary<long, string> results = new Dictionary<long, string>();
+
+            if (string.IsNullOrEmpty(searchString) || !IsEDIFile(filePath))
+                return results;
+
+            Delimeters del = new Delimeters(filePath);
+            char segDelim = del.SegmentDelimeter;
+
+            int segmentNumber = 0;
+            string leftover = "";
+            int bufferSize = 131072; // 128KB chunks
+            var utf8 = new UTF8Encoding(false);
+
+            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            {
+                byte[] buffer = new byte[bufferSize];
+                int bytesRead;
+                long filePosition = 0;
+
+                while ((bytesRead = fs.Read(buffer, 0, bufferSize)) > 0 && results.Count < maxResults)
+                {
+                    string chunk = leftover + utf8.GetString(buffer, 0, bytesRead);
+                    long chunkStartOffset = filePosition - leftover.Length;
+
+                    string[] parts = chunk.Split(segDelim);
+
+                    long offsetInChunk = 0;
+                    for (int i = 0; i < parts.Length - 1; i++)
+                    {
+                        string rawSeg = parts[i];
+                        string seg = rawSeg.Replace("\r", "").Replace("\n", "");
+
+                        if (seg.Length > 0)
+                        {
+                            segmentNumber++;
+                            if (seg.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                string sample = seg.Length > 200 ? seg.Substring(0, 200) : seg;
+                                long byteOffset = chunkStartOffset + offsetInChunk;
+                                if (!results.ContainsKey(byteOffset))
+                                    results.Add(byteOffset, " Seg:" + segmentNumber + "  " + sample);
+                                if (results.Count >= maxResults) break;
+                            }
+                        }
+
+                        offsetInChunk += rawSeg.Length + 1; // +1 for delimiter
+                    }
+
+                    leftover = parts[parts.Length - 1];
+                    filePosition += bytesRead;
+                }
+
+                // Handle final segment without trailing delimiter
+                if (leftover.Length > 0 && results.Count < maxResults)
+                {
+                    string seg = leftover.Replace("\r", "").Replace("\n", "");
+                    if (seg.Length > 0)
+                    {
+                        segmentNumber++;
+                        if (seg.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            string sample = seg.Length > 200 ? seg.Substring(0, 200) : seg;
+                            long byteOffset = filePosition - leftover.Length;
+                            if (!results.ContainsKey(byteOffset))
+                                results.Add(byteOffset, " Seg:" + segmentNumber + "  " + sample);
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine(String.Format("EDI Search Count:{0:n0} Total Segments:{1:n0}", results.Count, segmentNumber));
+            return results;
         }
 
         public string ParseString(string textValue, string filePath)

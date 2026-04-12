@@ -216,6 +216,7 @@ namespace ScintillaNET.Demo {
 		{
 			FileUtils.CurFileName = "";
 			FileUtils.fileSize = 0;
+			FileUtils.LineOffsetIndex = null;
 			labelTotalBytes.Text = String.Format("Bytes: {0:n0}", 0);
 			labelTotals.Text = "0";
 			this.Text = "";
@@ -442,17 +443,19 @@ namespace ScintillaNET.Demo {
 				FileInfo fi = new FileInfo(path);
 				long fileSize = fi.Length;
 				FileUtils.fileSize = fileSize;
+				FileUtils.LineOffsetIndex = null;
+				ResetLineNumbers();
 				labelTotalBytes.Text = String.Format("Bytes: {0:n0}", fileSize);
 				int totPages = (int)(FileUtils.fileSize / getLimit());
 				labelTotals.Text = totPages.ToString(); 
-				
+
 				this.Text = path;
 
 
 				try
-                {
+				{
 					int limit = getLimit();
-					
+
 					if (limit > 0)
 					{
 						if (FileUtils.GCTrigger == 5)
@@ -461,16 +464,20 @@ namespace ScintillaNET.Demo {
 							FileUtils.GCTrigger = 0;
 						}
 
-						
+
 						TextArea.Text = FileUtils.readNBites(path, limit, 0);
 						FileUtils.GCTrigger++;
+						if (FileUtils.fileHasLineBreaks)
+						{
+							UpdateLineNumbers(1);
+						}
 						return;
 					}
 				}
 				catch (Exception ex )
-                {
-                    //do nothing
-                }
+				{
+					//do nothing
+				}
 
 				TextArea.Text = File.ReadAllText(path);
 
@@ -837,6 +844,7 @@ namespace ScintillaNET.Demo {
 					{
 						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
 						textBoxPage.Text = page.ToString();
+						ApplyLineNumbers(page);
 					}
 
 				}
@@ -873,6 +881,7 @@ namespace ScintillaNET.Demo {
 					{
 						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
 						textBoxPage.Text = page.ToString();
+						ApplyLineNumbers(page);
 					}
 
 				}
@@ -912,7 +921,7 @@ namespace ScintillaNET.Demo {
 					{
 						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
 						textBoxPage.Text = page.ToString();
-						//UpdateLineNumbers(100); TESTING ONLY 
+						ApplyLineNumbers(page);
 					}
 
 				}
@@ -999,7 +1008,17 @@ namespace ScintillaNET.Demo {
 		private void buttonSearchFile_Click(object sender, EventArgs e)
 		{
 			string txt = textBoxSearchFile.Text.Trim();
-			Dictionary<long, string> loc = FileUtils.SearchDisplayedText(TextArea.Text, txt);
+			Dictionary<long, string> loc;
+
+			EDIHelper helper = new EDIHelper();
+			if (!string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName) && helper.IsEDIFile(FileUtils.CurFileName))
+			{
+				loc = helper.SearchEDIFile(FileUtils.CurFileName, txt);
+			}
+			else
+			{
+				loc = FileUtils.SearchDisplayedText(TextArea.Text, txt);
+			}
 
 			richTextBoxBottom.Clear();
 			richTextBoxBottom.Font = new Font("Consolas", 9);
@@ -1010,24 +1029,34 @@ namespace ScintillaNET.Demo {
 				string offsetStr = kvp.Key.ToString();
 				richTextBoxBottom.AppendText(offsetStr);
 
-				// Find "Line:N" portion and highlight it
 				string value = kvp.Value;
-				int lineIdx = value.IndexOf("Line:");
-				if (lineIdx >= 0)
+
+				// Find tag portion ("Line:N" or "Seg:N") and highlight it
+				string tag = null;
+				int tagIdx = value.IndexOf("Line:");
+				if (tagIdx >= 0)
 				{
-					// Text before "Line:"
-					string before = value.Substring(0, lineIdx);
+					tag = "Line:";
+				}
+				else
+				{
+					tagIdx = value.IndexOf("Seg:");
+					if (tagIdx >= 0) tag = "Seg:";
+				}
+
+				if (tag != null && tagIdx >= 0)
+				{
+					string before = value.Substring(0, tagIdx);
 					richTextBoxBottom.AppendText(before);
 
-					// Extract "Line:N"
-					int numEnd = value.IndexOf(" ", lineIdx + 5);
+					int numEnd = value.IndexOf(" ", tagIdx + tag.Length);
 					if (numEnd == -1) numEnd = value.Length;
-					string lineTag = value.Substring(lineIdx, numEnd - lineIdx);
+					string tagLabel = value.Substring(tagIdx, numEnd - tagIdx);
 					string rest = value.Substring(numEnd);
 
 					int linkStart = richTextBoxBottom.TextLength;
-					richTextBoxBottom.AppendText(lineTag);
-					richTextBoxBottom.Select(linkStart, lineTag.Length);
+					richTextBoxBottom.AppendText(tagLabel);
+					richTextBoxBottom.Select(linkStart, tagLabel.Length);
 					richTextBoxBottom.SelectionColor = Color.Blue;
 					richTextBoxBottom.SelectionFont = new Font(richTextBoxBottom.Font, FontStyle.Bold | FontStyle.Underline);
 
@@ -1088,6 +1117,17 @@ namespace ScintillaNET.Demo {
 					int lnInt = Int32.Parse(lnStr);
 					ScrollToLineNumber(lnInt);
 				}
+				else if (str.Contains("Seg:"))
+				{
+					// EDI segment result: first number is byte offset, jump to that page
+					string numStr = str.Trim().Split(' ')[0];
+					long loc = long.Parse(numStr);
+					int page = (int)(loc / getLimit());
+
+					Console.WriteLine(String.Format("EDI Seg double click offset:{0:n0} page:{1:n0}", loc, page));
+
+					buttonJumpToAnyPage(page);
+				}
 				else
 				{
 					string numStr = str.Trim().Split(' ')[0];
@@ -1102,11 +1142,11 @@ namespace ScintillaNET.Demo {
 
 
 			}
-            catch (Exception ex)
-            {
+			catch (Exception ex)
+			{
 
-                Console.WriteLine(ex.Message);
-            }
+				Console.WriteLine(ex.Message);
+			}
 		}
 
 
@@ -1146,18 +1186,46 @@ namespace ScintillaNET.Demo {
 		}
 
 
-        #region custom_line_numbers
-        private void UpdateLineNumbers(int startingAtLine)
+		#region custom_line_numbers
+		private void UpdateLineNumbers(int startingAtLine)
 		{
+			// Hide auto line numbers on margin 1
+			TextArea.Margins[NUMBER_MARGIN].Width = 0;
+
+			// Show custom global line numbers on margin 0
 			TextArea.Margins[0].Type = MarginType.RightText;
-			TextArea.Margins[0].Width = 35;
-			// Starting at the specified line index, update each
-			// subsequent line margin text with a hex line number.
+			TextArea.Margins[0].Width = 55;
 			for (int i = 0; i < TextArea.Lines.Count; i++)
 			{
 				TextArea.Lines[i].MarginStyle = Style.LineNumber;
-				TextArea.Lines[i].MarginText = (i+startingAtLine).ToString();
+				TextArea.Lines[i].MarginText = (i + startingAtLine).ToString();
 			}
+		}
+
+		private void ResetLineNumbers()
+		{
+			TextArea.Margins[0].Width = 0;
+			TextArea.Margins[NUMBER_MARGIN].Width = 50;
+			TextArea.Margins[NUMBER_MARGIN].Type = MarginType.Number;
+		}
+
+		private void ApplyLineNumbers(int page)
+		{
+			if (!FileUtils.fileHasLineBreaks) return;
+			int limit = getLimit();
+			if (limit <= 0) return;
+
+			// Lazy build: index is built on first page navigation
+			if (FileUtils.LineOffsetIndex == null)
+			{
+				this.Cursor = Cursors.WaitCursor;
+				FileUtils.BuildLineIndex(FileUtils.CurFileName);
+				this.Cursor = Cursors.Default;
+			}
+
+			long byteOffset = (long)page * limit;
+			int startLine = FileUtils.GetLineNumberAtOffset(FileUtils.CurFileName, byteOffset);
+			UpdateLineNumbers(startLine);
 		}
 
 
