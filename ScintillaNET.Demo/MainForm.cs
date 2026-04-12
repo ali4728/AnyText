@@ -939,19 +939,53 @@ namespace ScintillaNET.Demo {
 
 		}
 
-        private void buttonSearchFile_Click(object sender, EventArgs e)
-        {
+		private void buttonSearchFile_Click(object sender, EventArgs e)
+		{
 			string txt = textBoxSearchFile.Text.Trim();
-			StringBuilder sb = new StringBuilder();
-			Dictionary<long, string> loc  = FileUtils.SearchFile(FileUtils.CurFileName, txt);
+			Dictionary<long, string> loc = FileUtils.SearchDisplayedText(TextArea.Text, txt);
+
+			richTextBoxBottom.Clear();
+			richTextBoxBottom.Font = new Font("Consolas", 9);
+
 			foreach (KeyValuePair<long, string> kvp in loc)
 			{
-				
-				sb.AppendLine(String.Format("{0} {1}", kvp.Key, kvp.Value));
+				int startPos = richTextBoxBottom.TextLength;
+				string offsetStr = kvp.Key.ToString();
+				richTextBoxBottom.AppendText(offsetStr);
+
+				// Find "Line:N" portion and highlight it
+				string value = kvp.Value;
+				int lineIdx = value.IndexOf("Line:");
+				if (lineIdx >= 0)
+				{
+					// Text before "Line:"
+					string before = value.Substring(0, lineIdx);
+					richTextBoxBottom.AppendText(before);
+
+					// Extract "Line:N"
+					int numEnd = value.IndexOf(" ", lineIdx + 5);
+					if (numEnd == -1) numEnd = value.Length;
+					string lineTag = value.Substring(lineIdx, numEnd - lineIdx);
+					string rest = value.Substring(numEnd);
+
+					int linkStart = richTextBoxBottom.TextLength;
+					richTextBoxBottom.AppendText(lineTag);
+					richTextBoxBottom.Select(linkStart, lineTag.Length);
+					richTextBoxBottom.SelectionColor = Color.Blue;
+					richTextBoxBottom.SelectionFont = new Font(richTextBoxBottom.Font, FontStyle.Bold | FontStyle.Underline);
+
+					richTextBoxBottom.AppendText(rest);
+				}
+				else
+				{
+					richTextBoxBottom.AppendText(value);
+				}
+
+				richTextBoxBottom.AppendText(Environment.NewLine);
 			}
 
-			richTextBoxBottom.Text = sb.ToString();
-						
+			richTextBoxBottom.SelectionStart = 0;
+			richTextBoxBottom.SelectionLength = 0;
 		}
 
 
@@ -980,23 +1014,27 @@ namespace ScintillaNET.Demo {
 		}
       
 
-        private void richTextBoxBottom_DoubleClick(object sender, EventArgs e)
-        {
+		private void richTextBoxBottom_DoubleClick(object sender, EventArgs e)
+		{
 
-			string str = richTextBoxBottom.SelectedText;
-			Console.WriteLine("text is selected: " + str);
+			string str = richTextBoxBottom.Lines[richTextBoxBottom.GetLineFromCharIndex(richTextBoxBottom.SelectionStart)];
+			Console.WriteLine("line is selected: " + str);
 			//
-            try
-            {
-				if (str.Contains("Line"))
+			try
+			{
+				if (str.Contains("Line:"))
 				{
-					string lnStr = str.Replace("Line", "");
+					int lineStart = str.IndexOf("Line:") + 5;
+					int lineEnd = str.IndexOf(" ", lineStart);
+					if (lineEnd == -1) lineEnd = str.Length;
+					string lnStr = str.Substring(lineStart, lineEnd - lineStart).Trim();
 					int lnInt = Int32.Parse(lnStr);
 					ScrollToLineNumber(lnInt);
 				}
 				else
 				{
-					int loc = Int32.Parse(str);
+					string numStr = str.Trim().Split(' ')[0];
+					int loc = Int32.Parse(numStr);
 					int page = loc / getLimit();
 
 					Console.WriteLine(String.Format("Double click page:{0:n0} ", page));

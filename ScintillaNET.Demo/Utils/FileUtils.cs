@@ -203,7 +203,6 @@ namespace ScintillaNET.Demo.Utils
         {
             Dictionary<long, string> loc = new Dictionary<long, string>();
 
-            byte[] searchBytes = Encoding.UTF8.GetBytes(searchString);
             int offset = 0;
             int limit = 100000;
             int maxSearchCounter = 10000; //10K limit search results for memory protection
@@ -228,21 +227,21 @@ namespace ScintillaNET.Demo.Utils
 
                         byte[] bytes = new byte[limit];
                         Console.WriteLine(String.Format("SEARCH read byte size:{0:n0} offset:{1:n0} fs.Len:{2:n0}", limit, offset, fs.Length));
-                    
+
                         fs.Seek(offset, 0);
                         int n = fs.Read(bytes, 0, limit);
 
-                   
+
                         if (n > 0)
                         {
-                            string str = System.Text.Encoding.Default.GetString(bytes);
-                        
+                            var utf8NoBom = new UTF8Encoding(false);
+                            string str = utf8NoBom.GetString(bytes, 0, n);
+
                             if (!String.IsNullOrEmpty(str))
                             {
                                 ////Line numbers
                                 char[] charAry = str.ToCharArray();
                                 Dictionary<int, int> lineDict = new Dictionary<int, int>();
-                                //List<int> lineList = new List<int>();
                                 int lineCounter = 0;
 
                                 for (int i = 0; i < charAry.Length; i++)
@@ -253,7 +252,6 @@ namespace ScintillaNET.Demo.Utils
                                     {
                                         lineCounter++;
                                         lineDict.Add(i, lineCounter);
-                                        //lineList.Add(i);
                                     }
                                 }
 
@@ -261,8 +259,8 @@ namespace ScintillaNET.Demo.Utils
 
                                 int idx = -1;
                                 int strIdx = 0;
-                                
-                                while ((idx = str.IndexOf(searchString, strIdx)) > -1)
+
+                                while ((idx = str.IndexOf(searchString, strIdx, StringComparison.OrdinalIgnoreCase)) > -1)
                                 {
                                     if (searchCounter < maxSearchCounter)
                                     {
@@ -277,8 +275,6 @@ namespace ScintillaNET.Demo.Utils
                                         }
 
                                         strIdx = idx + 1;
-                                        //int closest = lineList.Aggregate((x,y) => Math.Abs(x-idx) < Math.Abs(y-idx) ? x : y);
-                                        //int lineMatch = lineDict[closest];
                                         int lineMatch = 1;                                  
 
                                         if (lineDict.ContainsKey(curLineNumber))
@@ -286,21 +282,24 @@ namespace ScintillaNET.Demo.Utils
                                             lineMatch = lineDict[curLineNumber] + 1;
                                         }
 
+                                        int lineStart = (curLineNumber >= 0) ? curLineNumber + 1 : 0;
+                                        int lineEnd = str.IndexOf('\n', idx);
+                                        if (lineEnd == -1) lineEnd = str.Length;
+                                        string lineText = str.Substring(lineStart, Math.Min(lineEnd - lineStart, 200)).Trim();
 
-                                        loc.Add((long)(idx + offset), " Line" + lineMatch.ToString());
-                                        
-                                        //loc.Add((long)(idx + offset), searchString);
+                                        loc.Add((long)(idx + offset), " Line:" + lineMatch.ToString() + "  " + lineText);
+
                                         searchCounter++;
                                     }
                                     else 
                                     {
                                         break;
                                     }
-                        
+
                                 }
                             }
-                        
-                        
+
+
                         }
 
                         offset = offset + limit;
@@ -311,45 +310,59 @@ namespace ScintillaNET.Demo.Utils
 
             Console.WriteLine(String.Format("Search Count:{0:n0}", searchCounter));
 
-            
-            //using (StreamReader sr = new StreamReader(filepath))
-            //{
-            //    char curChar;
-
-            //    var sb = new StringBuilder();
-            //    while (sr.Peek() >= 0)
-            //    {
-            //        curChar = (char)sr.Read();
-            //        counter++;
-            //        sb.Append(curChar);
-
-            //        if (curChar == '\r' && sr.Peek() == 10)
-            //        {
-            //            curChar = (char)sr.Read(); //advance stream
-            //            counter++;
-            //            sb.Append(curChar);
-            //            if (sb.Length > size)
-            //            {
-
-            //            }
-            //        }
-            //        else if (curChar == '\n')
-            //        {
-
-            //        }
-
-
-            //        if (sr.Peek() == 13) { sr.Read(); } //advance CR
-            //        if (sr.Peek() == 10) { sr.Read(); } //advance LF
-
-
-            //    }
-            //}
-
-
-
             return loc;
 
+        }
+
+        public static Dictionary<long, string> SearchDisplayedText(string displayedText, string searchString)
+        {
+            Dictionary<long, string> loc = new Dictionary<long, string>();
+
+            if (string.IsNullOrEmpty(displayedText) || string.IsNullOrEmpty(searchString))
+                return loc;
+
+            int maxSearchCounter = 10000;
+            int searchCounter = 0;
+            int strIdx = 0;
+            int idx;
+
+            string[] lines = displayedText.Split('\n');
+            int[] lineStartOffsets = new int[lines.Length];
+            int runningOffset = 0;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lineStartOffsets[i] = runningOffset;
+                runningOffset += lines[i].Length + 1;
+            }
+
+            while ((idx = displayedText.IndexOf(searchString, strIdx, StringComparison.OrdinalIgnoreCase)) > -1)
+            {
+                if (searchCounter >= maxSearchCounter)
+                    break;
+
+                int lineNumber = 1;
+                for (int i = lines.Length - 1; i >= 0; i--)
+                {
+                    if (idx >= lineStartOffsets[i])
+                    {
+                        lineNumber = i + 1;
+                        break;
+                    }
+                }
+
+                string lineText = (lineNumber <= lines.Length) ? lines[lineNumber - 1].Trim() : "";
+                if (lineText.Length > 200)
+                    lineText = lineText.Substring(0, 200);
+
+                loc.Add((long)idx, " Line:" + lineNumber.ToString() + "  " + lineText);
+
+                strIdx = idx + 1;
+                searchCounter++;
+            }
+
+            Console.WriteLine(String.Format("Search Displayed Count:{0:n0}", searchCounter));
+
+            return loc;
         }
     }
 }
