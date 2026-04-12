@@ -70,6 +70,11 @@
             this.sQLStyleToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.syntaxXMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.syntaxPlainToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveFileAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparatorTemp = new System.Windows.Forms.ToolStripSeparator();
+            this.copyTempPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openTempFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.copyOriginalPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.PanelSearch = new System.Windows.Forms.Panel();
             this.BtnNextSearch = new System.Windows.Forms.Button();
             this.BtnPrevSearch = new System.Windows.Forms.Button();
@@ -89,11 +94,6 @@
             this.textBoxSearchFile = new System.Windows.Forms.TextBox();
             this.buttonSearchFile = new System.Windows.Forms.Button();
             this.buttonCountFile = new System.Windows.Forms.Button();
-            this.saveFileAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparatorTemp = new System.Windows.Forms.ToolStripSeparator();
-            this.copyTempPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.openTempFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.copyOriginalPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.PanelSearch.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -481,6 +481,39 @@
             this.syntaxPlainToolStripMenuItem.Text = "Syntax_Plain";
             this.syntaxPlainToolStripMenuItem.Click += new System.EventHandler(this.syntaxPlainToolStripMenuItem_Click);
             // 
+            // saveFileAsToolStripMenuItem
+            // 
+            this.saveFileAsToolStripMenuItem.Name = "saveFileAsToolStripMenuItem";
+            this.saveFileAsToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.saveFileAsToolStripMenuItem.Text = "Save File As";
+            this.saveFileAsToolStripMenuItem.Click += new System.EventHandler(this.saveFileAsToolStripMenuItem_Click);
+            // 
+            // toolStripSeparatorTemp
+            // 
+            this.toolStripSeparatorTemp.Name = "toolStripSeparatorTemp";
+            this.toolStripSeparatorTemp.Size = new System.Drawing.Size(218, 6);
+            // 
+            // copyTempPathToolStripMenuItem
+            // 
+            this.copyTempPathToolStripMenuItem.Name = "copyTempPathToolStripMenuItem";
+            this.copyTempPathToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.copyTempPathToolStripMenuItem.Text = "Copy Temp File Path";
+            this.copyTempPathToolStripMenuItem.Click += new System.EventHandler(this.copyTempPathToolStripMenuItem_Click);
+            // 
+            // openTempFolderToolStripMenuItem
+            // 
+            this.openTempFolderToolStripMenuItem.Name = "openTempFolderToolStripMenuItem";
+            this.openTempFolderToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.openTempFolderToolStripMenuItem.Text = "Open Temp Folder";
+            this.openTempFolderToolStripMenuItem.Click += new System.EventHandler(this.openTempFolderToolStripMenuItem_Click);
+            // 
+            // copyOriginalPathToolStripMenuItem
+            // 
+            this.copyOriginalPathToolStripMenuItem.Name = "copyOriginalPathToolStripMenuItem";
+            this.copyOriginalPathToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.copyOriginalPathToolStripMenuItem.Text = "Copy Original File Path";
+            this.copyOriginalPathToolStripMenuItem.Click += new System.EventHandler(this.copyOriginalPathToolStripMenuItem_Click);
+            // 
             // PanelSearch
             // 
             this.PanelSearch.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -563,7 +596,7 @@
             // 
             // textBoxLimit
             // 
-            this.textBoxLimit.Location = new System.Drawing.Point(534, 45);
+            this.textBoxLimit.Location = new System.Drawing.Point(457, 45);
             this.textBoxLimit.Name = "textBoxLimit";
             this.textBoxLimit.Size = new System.Drawing.Size(72, 23);
             this.textBoxLimit.TabIndex = 11;
@@ -573,7 +606,7 @@
             // labelMaxBytes
             // 
             this.labelMaxBytes.AutoSize = true;
-            this.labelMaxBytes.Location = new System.Drawing.Point(470, 48);
+            this.labelMaxBytes.Location = new System.Drawing.Point(393, 48);
             this.labelMaxBytes.Name = "labelMaxBytes";
             this.labelMaxBytes.Size = new System.Drawing.Size(58, 15);
             this.labelMaxBytes.TabIndex = 12;
@@ -582,7 +615,7 @@
             // labelTotalBytes
             // 
             this.labelTotalBytes.AutoSize = true;
-            this.labelTotalBytes.Location = new System.Drawing.Point(308, 48);
+            this.labelTotalBytes.Location = new System.Drawing.Point(265, 48);
             this.labelTotalBytes.Name = "labelTotalBytes";
             this.labelTotalBytes.Size = new System.Drawing.Size(41, 15);
             this.labelTotalBytes.TabIndex = 13;
@@ -590,9 +623,9 @@
             // 
             // textBoxPage
             // 
-            this.textBoxPage.Location = new System.Drawing.Point(55, 44);
+            this.textBoxPage.Location = new System.Drawing.Point(44, 44);
             this.textBoxPage.Name = "textBoxPage";
-            this.textBoxPage.Size = new System.Drawing.Size(77, 23);
+            this.textBoxPage.Size = new System.Drawing.Size(69, 23);
             this.textBoxPage.TabIndex = 14;
             this.textBoxPage.Text = "0";
             this.textBoxPage.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
@@ -600,7 +633,7 @@
             // 
             // buttonLeft
             // 
-            this.buttonLeft.Location = new System.Drawing.Point(138, 45);
+            this.buttonLeft.Location = new System.Drawing.Point(119, 45);
             this.buttonLeft.Name = "buttonLeft";
             this.buttonLeft.Size = new System.Drawing.Size(36, 23);
             this.buttonLeft.TabIndex = 15;
@@ -610,7 +643,7 @@
             // 
             // buttonRight
             // 
-            this.buttonRight.Location = new System.Drawing.Point(180, 44);
+            this.buttonRight.Location = new System.Drawing.Point(161, 44);
             this.buttonRight.Name = "buttonRight";
             this.buttonRight.Size = new System.Drawing.Size(36, 23);
             this.buttonRight.TabIndex = 16;
@@ -620,7 +653,7 @@
             // 
             // buttonJumpTo
             // 
-            this.buttonJumpTo.Location = new System.Drawing.Point(11, 45);
+            this.buttonJumpTo.Location = new System.Drawing.Point(11, 44);
             this.buttonJumpTo.Name = "buttonJumpTo";
             this.buttonJumpTo.Size = new System.Drawing.Size(27, 23);
             this.buttonJumpTo.TabIndex = 18;
@@ -631,7 +664,7 @@
             // labelTotals
             // 
             this.labelTotals.AutoSize = true;
-            this.labelTotals.Location = new System.Drawing.Point(222, 48);
+            this.labelTotals.Location = new System.Drawing.Point(203, 48);
             this.labelTotals.Name = "labelTotals";
             this.labelTotals.Size = new System.Drawing.Size(13, 15);
             this.labelTotals.TabIndex = 17;
@@ -672,16 +705,16 @@
             // 
             // textBoxSearchFile
             // 
-            this.textBoxSearchFile.Location = new System.Drawing.Point(773, 44);
+            this.textBoxSearchFile.Location = new System.Drawing.Point(675, 44);
             this.textBoxSearchFile.Name = "textBoxSearchFile";
             this.textBoxSearchFile.Size = new System.Drawing.Size(169, 23);
             this.textBoxSearchFile.TabIndex = 20;
             // 
             // buttonSearchFile
             // 
-            this.buttonSearchFile.Location = new System.Drawing.Point(692, 43);
+            this.buttonSearchFile.Location = new System.Drawing.Point(586, 43);
             this.buttonSearchFile.Name = "buttonSearchFile";
-            this.buttonSearchFile.Size = new System.Drawing.Size(75, 23);
+            this.buttonSearchFile.Size = new System.Drawing.Size(81, 23);
             this.buttonSearchFile.TabIndex = 21;
             this.buttonSearchFile.Text = "Search";
             this.buttonSearchFile.UseVisualStyleBackColor = true;
@@ -689,46 +722,13 @@
             // 
             // buttonCountFile
             // 
-            this.buttonCountFile.Location = new System.Drawing.Point(611, 43);
+            this.buttonCountFile.Location = new System.Drawing.Point(856, 44);
             this.buttonCountFile.Name = "buttonCountFile";
-            this.buttonCountFile.Size = new System.Drawing.Size(75, 23);
+            this.buttonCountFile.Size = new System.Drawing.Size(85, 23);
             this.buttonCountFile.TabIndex = 22;
             this.buttonCountFile.Text = "Count";
             this.buttonCountFile.UseVisualStyleBackColor = true;
             this.buttonCountFile.Click += new System.EventHandler(this.buttonCountFile_Click);
-            // 
-            // saveFileAsToolStripMenuItem
-            // 
-            this.saveFileAsToolStripMenuItem.Name = "saveFileAsToolStripMenuItem";
-            this.saveFileAsToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.saveFileAsToolStripMenuItem.Text = "Save File As";
-            this.saveFileAsToolStripMenuItem.Click += new System.EventHandler(this.saveFileAsToolStripMenuItem_Click);
-            // 
-            // toolStripSeparatorTemp
-            // 
-            this.toolStripSeparatorTemp.Name = "toolStripSeparatorTemp";
-            this.toolStripSeparatorTemp.Size = new System.Drawing.Size(218, 6);
-            // 
-            // copyTempPathToolStripMenuItem
-            // 
-            this.copyTempPathToolStripMenuItem.Name = "copyTempPathToolStripMenuItem";
-            this.copyTempPathToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.copyTempPathToolStripMenuItem.Text = "Copy Temp File Path";
-            this.copyTempPathToolStripMenuItem.Click += new System.EventHandler(this.copyTempPathToolStripMenuItem_Click);
-            // 
-            // openTempFolderToolStripMenuItem
-            // 
-            this.openTempFolderToolStripMenuItem.Name = "openTempFolderToolStripMenuItem";
-            this.openTempFolderToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.openTempFolderToolStripMenuItem.Text = "Open Temp Folder";
-            this.openTempFolderToolStripMenuItem.Click += new System.EventHandler(this.openTempFolderToolStripMenuItem_Click);
-            // 
-            // copyOriginalPathToolStripMenuItem
-            // 
-            this.copyOriginalPathToolStripMenuItem.Name = "copyOriginalPathToolStripMenuItem";
-            this.copyOriginalPathToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.copyOriginalPathToolStripMenuItem.Text = "Copy Original File Path";
-            this.copyOriginalPathToolStripMenuItem.Click += new System.EventHandler(this.copyOriginalPathToolStripMenuItem_Click);
             // 
             // MainForm
             // 
