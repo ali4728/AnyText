@@ -114,8 +114,8 @@ namespace ScintillaNET.Demo
                                 string sample = seg.Length > 200 ? seg.Substring(0, 200) : seg;
                                 long byteOffset = chunkStartOffset + offsetInChunk;
                                 if (!results.ContainsKey(byteOffset))
-                                    results.Add(byteOffset, " Seg:" + segmentNumber + "  " + sample);
-                                if (results.Count >= maxResults) break;
+                                    results.Add(byteOffset, " Line:" + segmentNumber + "  " + sample);
+                                    if (results.Count >= maxResults) break;
                             }
                         }
 
@@ -138,7 +138,7 @@ namespace ScintillaNET.Demo
                             string sample = seg.Length > 200 ? seg.Substring(0, 200) : seg;
                             long byteOffset = filePosition - leftover.Length;
                             if (!results.ContainsKey(byteOffset))
-                                results.Add(byteOffset, " Seg:" + segmentNumber + "  " + sample);
+                                results.Add(byteOffset, " Line:" + segmentNumber + "  " + sample);
                         }
                     }
                 }

@@ -1104,17 +1104,12 @@ namespace ScintillaNET.Demo {
 
 				string value = kvp.Value;
 
-				// Find tag portion ("Line:N" or "Seg:N") and highlight it
+				// Find tag portion ("Line:N") and highlight it
 				string tag = null;
 				int tagIdx = value.IndexOf("Line:");
 				if (tagIdx >= 0)
 				{
 					tag = "Line:";
-				}
-				else
-				{
-					tagIdx = value.IndexOf("Seg:");
-					if (tagIdx >= 0) tag = "Seg:";
 				}
 
 				if (tag != null && tagIdx >= 0)
@@ -1188,58 +1183,62 @@ namespace ScintillaNET.Demo {
 					if (lineEnd == -1) lineEnd = str.Length;
 					string lnStr = str.Substring(lineStart, lineEnd - lineStart).Trim();
 					int lnInt = Int32.Parse(lnStr);
-					ScrollToLineNumber(lnInt);
-				}
-				else if (str.Contains("Seg:"))
-				{
-					// EDI segment result: first number is byte offset, jump to that page
+
+					// Check if result has a byte offset (paged file) or is in-page
 					string numStr = str.Trim().Split(' ')[0];
 					long loc = long.Parse(numStr);
 					int limit = getLimit();
-					int page = (int)(loc / limit);
 
-					Console.WriteLine(String.Format("EDI Seg double click offset:{0:n0} page:{1:n0}", loc, page));
-
-					buttonJumpToAnyPage(page);
-
-					// Scroll to the matching text within the loaded page
-					string searchText = textBoxSearchFile.Text.Trim();
-					if (!string.IsNullOrEmpty(searchText))
+					if (limit > 0 && loc >= limit)
 					{
-						HighlightWord(searchText);
+						// Paged result: byte offset is large, jump to the correct page
+						int page = (int)(loc / limit);
+						Console.WriteLine(String.Format("Line double click offset:{0:n0} page:{1:n0} line:{2:n0}", loc, page, lnInt));
 
-						// Estimate character position within the page from byte offset
-						long pageStartByte = (long)page * limit;
-						int approxCharPos = (int)(loc - pageStartByte);
-						int textLen = TextArea.TextLength;
-						if (approxCharPos >= textLen) approxCharPos = Math.Max(0, textLen - 1);
+						buttonJumpToAnyPage(page);
 
-						// Search near the estimated position first, then fall back to start
-						int searchFrom = Math.Max(0, approxCharPos - 200);
-						int pos = TextArea.Text.IndexOf(searchText, searchFrom, StringComparison.OrdinalIgnoreCase);
-						if (pos < 0)
-							pos = TextArea.Text.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
-
-						if (pos >= 0)
+						// Scroll to the matching text within the loaded page
+						string searchText = textBoxSearchFile.Text.Trim();
+						if (!string.IsNullOrEmpty(searchText))
 						{
-							int lineIdx = TextArea.LineFromPosition(pos);
-							var linesOnScreen = TextArea.LinesOnScreen;
-							int topLine = Math.Max(0, lineIdx - (linesOnScreen / 2));
-							TextArea.FirstVisibleLine = topLine;
-							TextArea.SetSelection(pos, pos + searchText.Length);
+							HighlightWord(searchText);
+
+							long pageStartByte = (long)page * limit;
+							int approxCharPos = (int)(loc - pageStartByte);
+							int textLen = TextArea.TextLength;
+							if (approxCharPos >= textLen) approxCharPos = Math.Max(0, textLen - 1);
+
+							int searchFrom = Math.Max(0, approxCharPos - 200);
+							int pos = TextArea.Text.IndexOf(searchText, searchFrom, StringComparison.OrdinalIgnoreCase);
+							if (pos < 0)
+								pos = TextArea.Text.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+
+							if (pos >= 0)
+							{
+								int lineIdx = TextArea.LineFromPosition(pos);
+								var linesOnScreen = TextArea.LinesOnScreen;
+								int topLine = Math.Max(0, lineIdx - (linesOnScreen / 2));
+								TextArea.FirstVisibleLine = topLine;
+								TextArea.SetSelection(pos, pos + searchText.Length);
+							}
 						}
+					}
+					else
+					{
+						// In-page result: line number is within the visible text
+						ScrollToLineNumber(lnInt);
 					}
 				}
 				else
 				{
 					string numStr = str.Trim().Split(' ')[0];
-					int loc = Int32.Parse(numStr);
-					int page = loc / getLimit();
+					long loc = long.Parse(numStr);
+					int limit = getLimit();
+					int page = (limit > 0) ? (int)(loc / limit) : 0;
 
 					Console.WriteLine(String.Format("Double click page:{0:n0} ", page));
 
 					buttonJumpToAnyPage(page);
-
 				}
 
 
