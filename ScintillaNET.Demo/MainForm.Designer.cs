@@ -55,6 +55,7 @@
             this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
             this.unWrapXMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.unWrapFixWidthToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.ediRecordBoundariesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.indentGuidesItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hiddenCharactersItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -320,6 +321,7 @@
             this.toolStripSeparator9,
             this.unWrapXMLToolStripMenuItem,
             this.unWrapFixWidthToolStripMenuItem,
+            this.ediRecordBoundariesToolStripMenuItem,
             this.toolStripSeparator6,
             this.indentGuidesItem,
             this.hiddenCharactersItem,
@@ -376,6 +378,13 @@
             this.unWrapFixWidthToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
             this.unWrapFixWidthToolStripMenuItem.Text = "UnWrap FixWidth";
             this.unWrapFixWidthToolStripMenuItem.Click += new System.EventHandler(this.unWrapFixWidthToolStripMenuItem_Click);
+            // 
+            // ediRecordBoundariesToolStripMenuItem
+            // 
+            this.ediRecordBoundariesToolStripMenuItem.Name = "ediRecordBoundariesToolStripMenuItem";
+            this.ediRecordBoundariesToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.ediRecordBoundariesToolStripMenuItem.Text = "EDI Record Boundaries";
+            this.ediRecordBoundariesToolStripMenuItem.Click += new System.EventHandler(this.ediRecordBoundariesToolStripMenuItem_Click);
             // 
             // toolStripSeparator6
             // 
@@ -815,6 +824,7 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
         private System.Windows.Forms.ToolStripMenuItem unWrapFixWidthToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem ediRecordBoundariesToolStripMenuItem;
         private System.Windows.Forms.Label labelTotalBytes;
         private System.Windows.Forms.TextBox textBoxPage;
         private System.Windows.Forms.Button buttonLeft;

@@ -45,6 +45,9 @@ namespace ScintillaNET.Demo {
 			// BOOKMARK MARGIN
 			InitBookmarkMargin();
 
+			// EDI RECORD MARKERS
+			InitEdiRecordMarkers();
+
 			// CODE FOLDING MARGIN
 			//InitCodeFolding();
 
@@ -255,6 +258,13 @@ namespace ScintillaNET.Demo {
 		private const int BOOKMARK_MARKER = 2;
 
 		/// <summary>
+		/// Marker for alternating EDI record background (odd records)
+		/// </summary>
+		private const int EDI_RECORD_MARKER = 20;
+		private const int EDI_BOUNDARY_MARKER = 21;
+		private bool ediRecordBoundariesEnabled = false;
+
+		/// <summary>
 		/// change this to whatever margin you want the code folding tree (+/-) to show in
 		/// </summary>
 		private const int FOLDING_MARGIN = 3;
@@ -297,6 +307,115 @@ namespace ScintillaNET.Demo {
 			marker.SetForeColor(IntToColor(0x000000));
 			marker.SetAlpha(100);
 
+		}
+
+		private void InitEdiRecordMarkers()
+		{
+			// Marker for alternating record background (subtle tint)
+			var recordMarker = TextArea.Markers[EDI_RECORD_MARKER];
+			recordMarker.Symbol = MarkerSymbol.Background;
+			recordMarker.SetBackColor(Color.FromArgb(232, 242, 254)); // light blue tint
+
+			// Marker for boundary line (slightly stronger)
+			var boundaryMarker = TextArea.Markers[EDI_BOUNDARY_MARKER];
+			boundaryMarker.Symbol = MarkerSymbol.Background;
+			boundaryMarker.SetBackColor(Color.FromArgb(200, 225, 255)); // stronger blue for boundary line
+		}
+
+		private void ApplyEdiRecordBoundaries()
+		{
+			// Clear existing markers
+			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
+			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
+
+			if (!ediRecordBoundariesEnabled)
+				return;
+
+			// Only apply to EDI files
+			EDIHelper ediHelper = new EDIHelper();
+			if (string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName) || !ediHelper.IsEDIFile(FileUtils.CurFileName))
+				return;
+
+			int lineCount = TextArea.Lines.Count;
+			bool inOddRecord = false;
+			bool foundFirstBoundary = false;
+
+			for (int i = 0; i < lineCount; i++)
+			{
+				string lineText = TextArea.Lines[i].Text.TrimStart();
+
+				if (IsEdiBoundaryLine(lineText))
+				{
+					if (foundFirstBoundary)
+						inOddRecord = !inOddRecord;
+					foundFirstBoundary = true;
+
+					// Mark boundary line
+					TextArea.Lines[i].MarkerAdd(EDI_BOUNDARY_MARKER);
+				}
+				else if (inOddRecord)
+				{
+					TextArea.Lines[i].MarkerAdd(EDI_RECORD_MARKER);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Checks if a line is an EDI record boundary.
+		/// 834: INS segment starts a new member record.
+		/// 837: HL segment with HL03=22 (subscriber level) starts a new claim record.
+		/// </summary>
+		private bool IsEdiBoundaryLine(string lineText)
+		{
+			if (string.IsNullOrEmpty(lineText))
+				return false;
+
+			// 834 rule: INS* segment
+			if (lineText.Length > 3
+				&& lineText.StartsWith("INS", StringComparison.OrdinalIgnoreCase)
+				&& (lineText[3] == '*' || lineText[3] == '~'))
+				return true;
+
+			// 837 rule: HL*{any}*{any}*22  (HL03 = 22, subscriber level)
+			if (lineText.Length > 2
+				&& lineText.StartsWith("HL", StringComparison.OrdinalIgnoreCase)
+				&& lineText[2] == '*')
+			{
+				// Split into elements: HL, HL01, HL02, HL03, ...
+				// Only need first 4 elements
+				int elementCount = 0;
+				int startIdx = 0;
+				for (int c = 0; c < lineText.Length; c++)
+				{
+					if (lineText[c] == '*' || lineText[c] == '~')
+					{
+						elementCount++;
+						if (elementCount == 3) // found start of HL03
+						{
+							startIdx = c + 1;
+						}
+						else if (elementCount == 4) // found end of HL03
+						{
+							string hl03 = lineText.Substring(startIdx, c - startIdx);
+							return hl03 == "22";
+						}
+					}
+				}
+				// HL03 might be the last element (no trailing delimiter)
+				if (elementCount == 3 && startIdx < lineText.Length)
+				{
+					string hl03 = lineText.Substring(startIdx).TrimEnd('\r', '\n', '~');
+					return hl03 == "22";
+				}
+			}
+
+			return false;
+		}
+
+		private void ClearEdiRecordBoundaries()
+		{
+			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
+			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
 		}
 
 		private void InitCodeFolding() {
@@ -509,6 +628,7 @@ namespace ScintillaNET.Demo {
 									labelTotals.Text = totPagesEdi.ToString();
 									TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
 									UpdateLineNumbers(1);
+									ApplyEdiRecordBoundaries();
 								}
 								finally
 								{
@@ -546,6 +666,7 @@ namespace ScintillaNET.Demo {
 						if (FileUtils.fileHasLineBreaks)
 						{
 							UpdateLineNumbers(1);
+							ApplyEdiRecordBoundaries();
 						}
 						return;
 					}
@@ -930,9 +1051,24 @@ namespace ScintillaNET.Demo {
 		}
 
 		private void unWrapFixWidthToolStripMenuItem_Click(object sender, EventArgs e)
-        {
+		{
 			TextArea.Text = FileUtils.getFixWidth(TextArea.Text, 80);
-        }
+		}
+
+		private void ediRecordBoundariesToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			ediRecordBoundariesEnabled = !ediRecordBoundariesEnabled;
+			ediRecordBoundariesToolStripMenuItem.Checked = ediRecordBoundariesEnabled;
+
+			if (ediRecordBoundariesEnabled)
+			{
+				ApplyEdiRecordBoundaries();
+			}
+			else
+			{
+				ClearEdiRecordBoundaries();
+			}
+		}
 
 		private void buttonLeftShortcut()
 		{
@@ -951,6 +1087,7 @@ namespace ScintillaNET.Demo {
 						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
 						textBoxPage.Text = page.ToString();
 						ApplyLineNumbers(page);
+						ApplyEdiRecordBoundaries();
 					}
 
 				}
@@ -988,6 +1125,7 @@ namespace ScintillaNET.Demo {
 						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
 						textBoxPage.Text = page.ToString();
 						ApplyLineNumbers(page);
+						ApplyEdiRecordBoundaries();
 					}
 
 				}
@@ -1028,6 +1166,7 @@ namespace ScintillaNET.Demo {
 						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
 						textBoxPage.Text = page.ToString();
 						ApplyLineNumbers(page);
+						ApplyEdiRecordBoundaries();
 					}
 
 				}
@@ -1096,6 +1235,9 @@ namespace ScintillaNET.Demo {
 
 			// BOOKMARK MARGIN
 			InitBookmarkMargin();
+
+			// EDI RECORD MARKERS
+			InitEdiRecordMarkers();
 
 			// CODE FOLDING MARGIN
 			//InitCodeFolding();
