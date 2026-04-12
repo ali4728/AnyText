@@ -397,7 +397,12 @@ namespace ScintillaNET.Demo {
 			FileUtils.CurFileName = path;
 			FileUtils.fileHasLineBreaks = false;
 			FileUtils.CleanupTempEdiDir();
-			FileUtils.OriginalFileName = "";
+
+			// Only reset OriginalFileName if this is not a file from a ZIP extraction
+			if (string.IsNullOrEmpty(FileUtils.LastTempZipDir) || !path.StartsWith(FileUtils.LastTempZipDir, StringComparison.OrdinalIgnoreCase))
+			{
+				FileUtils.OriginalFileName = "";
+			}
 
 			if (File.Exists(path)) 
 			{
@@ -438,8 +443,6 @@ namespace ScintillaNET.Demo {
 						// Preserve original ZIP path so title bar shows it
 						FileUtils.OriginalFileName = path;
 						LoadDataFromFile(selectedFile);
-						// Ensure original ZIP path stays set after recursive load
-						FileUtils.OriginalFileName = path;
 					}
 					catch (Exception ex)
 					{
