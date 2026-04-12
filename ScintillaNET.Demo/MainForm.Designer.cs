@@ -91,6 +91,7 @@
             this.toolStripSeparatorTemp = new System.Windows.Forms.ToolStripSeparator();
             this.copyTempPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openTempFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.copyOriginalPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.PanelSearch.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -335,7 +336,8 @@
             this.saveFileAsToolStripMenuItem,
             this.toolStripSeparatorTemp,
             this.copyTempPathToolStripMenuItem,
-            this.openTempFolderToolStripMenuItem});
+            this.openTempFolderToolStripMenuItem,
+            this.copyOriginalPathToolStripMenuItem});
             this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
             this.viewToolStripMenuItem.Size = new System.Drawing.Size(50, 23);
             this.viewToolStripMenuItem.Text = "View";
@@ -701,6 +703,13 @@
             this.openTempFolderToolStripMenuItem.Text = "Open Temp Folder";
             this.openTempFolderToolStripMenuItem.Click += new System.EventHandler(this.openTempFolderToolStripMenuItem_Click);
             // 
+            // copyOriginalPathToolStripMenuItem
+            // 
+            this.copyOriginalPathToolStripMenuItem.Name = "copyOriginalPathToolStripMenuItem";
+            this.copyOriginalPathToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.copyOriginalPathToolStripMenuItem.Text = "Copy Original File Path";
+            this.copyOriginalPathToolStripMenuItem.Click += new System.EventHandler(this.copyOriginalPathToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -811,6 +820,7 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorTemp;
         private System.Windows.Forms.ToolStripMenuItem copyTempPathToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openTempFolderToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem copyOriginalPathToolStripMenuItem;
     }
 }
 

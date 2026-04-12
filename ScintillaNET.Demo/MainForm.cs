@@ -854,33 +854,51 @@ namespace ScintillaNET.Demo {
 
 		private void copyTempPathToolStripMenuItem_Click(object sender, EventArgs e)
 		{
+			// Only copy if a temp file is actually in use (ZIP extraction or EDI unwrap)
+			if (string.IsNullOrEmpty(FileUtils.LastTempZipDir) && string.IsNullOrEmpty(FileUtils.LastTempEdiDir))
+			{
+				MessageBox.Show("No temp file in use.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				return;
+			}
+
 			string tempPath = FileUtils.CurFileName;
 			if (!string.IsNullOrEmpty(tempPath) && File.Exists(tempPath))
 			{
 				Clipboard.SetText(tempPath);
 				Console.WriteLine("Copied temp path: " + tempPath);
 			}
-			else
-			{
-				MessageBox.Show("No temp file in use.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-			}
 		}
 
 		private void openTempFolderToolStripMenuItem_Click(object sender, EventArgs e)
 		{
+			// Only open if a temp folder is actually in use (ZIP extraction or EDI unwrap)
 			string tempDir = "";
-			if (!string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName))
+			if (!string.IsNullOrEmpty(FileUtils.LastTempZipDir) && Directory.Exists(FileUtils.LastTempZipDir))
 			{
-				tempDir = Path.GetDirectoryName(FileUtils.CurFileName);
+				tempDir = FileUtils.LastTempZipDir;
+			}
+			else if (!string.IsNullOrEmpty(FileUtils.LastTempEdiDir) && Directory.Exists(FileUtils.LastTempEdiDir))
+			{
+				tempDir = FileUtils.LastTempEdiDir;
 			}
 
-			if (!string.IsNullOrEmpty(tempDir) && Directory.Exists(tempDir))
+			if (!string.IsNullOrEmpty(tempDir))
 			{
 				Process.Start("explorer.exe", tempDir);
 			}
 			else
 			{
 				MessageBox.Show("No temp folder in use.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			}
+		}
+
+		private void copyOriginalPathToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			string originalPath = this.Text;
+			if (!string.IsNullOrEmpty(originalPath))
+			{
+				Clipboard.SetText(originalPath);
+				Console.WriteLine("Copied original path: " + originalPath);
 			}
 		}
 
