@@ -1140,6 +1140,15 @@ namespace ScintillaNET.Demo {
 			richTextBoxBottom.Clear();
 			richTextBoxBottom.Font = new Font("Consolas", 9);
 
+			if (loc.Count == 0)
+			{
+				string searchTerm = textBoxSearchFile.Text.Trim();
+				richTextBoxBottom.SelectionColor = Color.Red;
+				richTextBoxBottom.AppendText("No \"" + searchTerm + "\" found.");
+				richTextBoxBottom.SelectionColor = richTextBoxBottom.ForeColor;
+				return;
+			}
+
 			foreach (KeyValuePair<long, string> kvp in loc)
 			{
 				int startPos = richTextBoxBottom.TextLength;
