@@ -259,10 +259,20 @@ namespace ScintillaNET.Demo {
 
 		/// <summary>
 		/// Marker for alternating EDI record background (odd records)
-		/// </summary>
-		private const int EDI_RECORD_MARKER = 20;
-		private const int EDI_BOUNDARY_MARKER = 21;
-		private bool ediRecordBoundariesEnabled = false;
+			/// </summary>
+			private const int EDI_RECORD_MARKER = 20;
+			private const int EDI_BOUNDARY_MARKER = 21;
+			private bool ediRecordBoundariesEnabled = false;
+
+			/// <summary>
+			/// Indicator index for highlighting EDI segment IDs (e.g. CLM, LX)
+			/// </summary>
+			private const int EDI_SEGMENT_ID_INDICATOR = 8;
+
+			/// <summary>
+			/// Segment IDs to highlight for 837I/837P and 834 transaction sets
+			/// </summary>
+			private static readonly string[] EDI_837_SEGMENT_IDS = new string[] { "CLM", "LX", "HD" };
 
 		/// <summary>
 		/// change this to whatever margin you want the code folding tree (+/-) to show in
@@ -320,6 +330,14 @@ namespace ScintillaNET.Demo {
 			var boundaryMarker = TextArea.Markers[EDI_BOUNDARY_MARKER];
 			boundaryMarker.Symbol = MarkerSymbol.Background;
 			boundaryMarker.SetBackColor(Color.FromArgb(200, 225, 255)); // stronger blue for boundary line
+
+			// Indicator for EDI segment IDs (red rounded box)
+			var segIndicator = TextArea.Indicators[EDI_SEGMENT_ID_INDICATOR];
+			segIndicator.Style = IndicatorStyle.RoundBox;
+			segIndicator.ForeColor = Color.Red;
+			segIndicator.OutlineAlpha = 255;
+			segIndicator.Alpha = 60;
+			segIndicator.Under = true;
 		}
 
 		private void ApplyEdiRecordBoundaries()
@@ -327,6 +345,7 @@ namespace ScintillaNET.Demo {
 			// Clear existing markers
 			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
 			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
+			ClearEdiSegmentIdHighlights();
 
 			if (!ediRecordBoundariesEnabled)
 				return;
@@ -358,6 +377,8 @@ namespace ScintillaNET.Demo {
 					TextArea.Lines[i].MarkerAdd(EDI_RECORD_MARKER);
 				}
 			}
+
+			ApplyEdiSegmentIdHighlights();
 		}
 
 		/// <summary>
@@ -416,6 +437,45 @@ namespace ScintillaNET.Demo {
 		{
 			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
 			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
+			ClearEdiSegmentIdHighlights();
+		}
+
+		/// <summary>
+		/// Highlights the segment ID (e.g. CLM, LX, HD) at the start of matching EDI lines
+		/// with a red rounded-box indicator for 837I/837P and 834 transaction sets.
+		/// </summary>
+		private void ApplyEdiSegmentIdHighlights()
+		{
+			TextArea.IndicatorCurrent = EDI_SEGMENT_ID_INDICATOR;
+
+			int lineCount = TextArea.Lines.Count;
+			for (int i = 0; i < lineCount; i++)
+			{
+				string lineText = TextArea.Lines[i].Text;
+				string trimmed = lineText.TrimStart();
+				if (string.IsNullOrEmpty(trimmed))
+					continue;
+
+				int leadingSpaces = lineText.Length - trimmed.Length;
+
+				foreach (string segId in EDI_837_SEGMENT_IDS)
+				{
+					if (trimmed.Length > segId.Length
+						&& trimmed.StartsWith(segId, StringComparison.OrdinalIgnoreCase)
+						&& (trimmed[segId.Length] == '*' || trimmed[segId.Length] == '~'))
+					{
+						int pos = TextArea.Lines[i].Position + leadingSpaces;
+						TextArea.IndicatorFillRange(pos, segId.Length);
+						break;
+					}
+				}
+			}
+		}
+
+		private void ClearEdiSegmentIdHighlights()
+		{
+			TextArea.IndicatorCurrent = EDI_SEGMENT_ID_INDICATOR;
+			TextArea.IndicatorClearRange(0, TextArea.TextLength);
 		}
 
 		private void InitCodeFolding() {
