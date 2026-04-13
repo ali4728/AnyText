@@ -731,9 +731,9 @@ namespace ScintillaNET.Demo {
 						return;
 					}
 				}
-				catch (Exception ex )
+				catch (Exception ex)
 				{
-					//do nothing
+					ShowError("Error reading file:", ex);
 				}
 
 				TextArea.Text = File.ReadAllText(path);
@@ -1007,6 +1007,18 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
+		private void ShowError(string message, Exception ex = null)
+		{
+			string fullMsg = ex != null ? message + " " + ex.Message : message;
+			Console.WriteLine(fullMsg);
+
+			richTextBoxBottom.Clear();
+			richTextBoxBottom.Font = new Font("Consolas", 9);
+			richTextBoxBottom.SelectionColor = Color.Red;
+			richTextBoxBottom.AppendText(fullMsg);
+			richTextBoxBottom.SelectionColor = richTextBoxBottom.ForeColor;
+		}
+
 
 
 
@@ -1217,12 +1229,12 @@ namespace ScintillaNET.Demo {
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex.Message);
+				ShowError("Error navigating to previous page:", ex);
 			}
 
 		}
 		private void buttonLeft_Click(object sender, EventArgs e)
-        {
+		{
 			buttonLeftShortcut();
 		}
 
@@ -1255,11 +1267,11 @@ namespace ScintillaNET.Demo {
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex.Message);
+				ShowError("Error navigating to next page:", ex);
 			}
 		}
-        private void buttonRight_Click(object sender, EventArgs e)
-        {
+		private void buttonRight_Click(object sender, EventArgs e)
+		{
 			buttonRightShortcut();
 		}
 
@@ -1296,11 +1308,11 @@ namespace ScintillaNET.Demo {
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex.Message);
+				ShowError("Error jumping to page:", ex);
 			}
 		}
 		private void buttonJumpTo_Click(object sender, EventArgs e)
-        {
+		{
 			try
 			{
 				int page = Int32.Parse(textBoxPage.Text);
@@ -1308,11 +1320,11 @@ namespace ScintillaNET.Demo {
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex.Message);
+				ShowError("Error jumping to page:", ex);
 			}
 		}
 
-        #endregion
+		#endregion
 
         private void syntaxXMLToolStripMenuItem_Click(object sender, EventArgs e)
         {
