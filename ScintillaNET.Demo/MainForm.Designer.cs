@@ -54,6 +54,7 @@
             this.wordWrapItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
             this.unWrapXMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.unWrapXMLFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.unWrapFixWidthToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ediRecordBoundariesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
@@ -320,6 +321,7 @@
             this.wordWrapItem,
             this.toolStripSeparator9,
             this.unWrapXMLToolStripMenuItem,
+            this.unWrapXMLFileToolStripMenuItem,
             this.unWrapFixWidthToolStripMenuItem,
             this.ediRecordBoundariesToolStripMenuItem,
             this.toolStripSeparator6,
@@ -371,6 +373,13 @@
             this.unWrapXMLToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
             this.unWrapXMLToolStripMenuItem.Text = "UnWrap XML";
             this.unWrapXMLToolStripMenuItem.Click += new System.EventHandler(this.unWrapXMLToolStripMenuItem_Click);
+            // 
+            // unWrapXMLFileToolStripMenuItem
+            // 
+            this.unWrapXMLFileToolStripMenuItem.Name = "unWrapXMLFileToolStripMenuItem";
+            this.unWrapXMLFileToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.unWrapXMLFileToolStripMenuItem.Text = "UnWrap XML File";
+            this.unWrapXMLFileToolStripMenuItem.Click += new System.EventHandler(this.unWrapXMLFileToolStripMenuItem_Click);
             // 
             // unWrapFixWidthToolStripMenuItem
             // 
@@ -819,6 +828,7 @@
         private System.Windows.Forms.Label labelMaxBytes;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemFileName;
         private System.Windows.Forms.ToolStripMenuItem unWrapXMLToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem unWrapXMLFileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem sQLStyleToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;

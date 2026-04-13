@@ -200,6 +200,89 @@ namespace ScintillaNET.Demo.Utils
             if (string.IsNullOrEmpty(textValue))
                 return textValue;
 
+            // Try XmlReader/XmlWriter first (proper formatting for well-formed XML)
+            try
+            {
+                string result = UnWrapXMLWithReader(textValue);
+                Console.WriteLine("UnWrapXML: used XmlReader/XmlWriter");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("UnWrapXML: XmlReader failed (" + ex.Message + "), falling back to lightweight parser");
+            }
+
+            // Fall back to lightweight character-based parser for malformed XML
+            return UnWrapXMLLightweight(textValue);
+        }
+
+        private static string UnWrapXMLWithReader(string textValue)
+        {
+            var readerSettings = new XmlReaderSettings();
+            readerSettings.DtdProcessing = DtdProcessing.Ignore;
+            readerSettings.IgnoreWhitespace = true;
+
+            var writerSettings = new XmlWriterSettings();
+            writerSettings.Indent = true;
+            writerSettings.IndentChars = "  ";
+            writerSettings.Encoding = new UTF8Encoding(false);
+            writerSettings.OmitXmlDeclaration = false;
+
+            using (StringReader sr = new StringReader(textValue))
+            using (XmlReader reader = XmlReader.Create(sr, readerSettings))
+            {
+                var sb = new StringBuilder(textValue.Length + (textValue.Length / 4));
+                using (StringWriter sw = new StringWriter(sb))
+                using (XmlWriter writer = XmlWriter.Create(sw, writerSettings))
+                {
+                    while (reader.Read())
+                    {
+                        switch (reader.NodeType)
+                        {
+                            case XmlNodeType.Element:
+                                writer.WriteStartElement(reader.Prefix, reader.LocalName, reader.NamespaceURI);
+                                if (reader.HasAttributes)
+                                {
+                                    while (reader.MoveToNextAttribute())
+                                    {
+                                        writer.WriteAttributeString(reader.Prefix, reader.LocalName, reader.NamespaceURI, reader.Value);
+                                    }
+                                    reader.MoveToElement();
+                                }
+                                if (reader.IsEmptyElement)
+                                    writer.WriteEndElement();
+                                break;
+                            case XmlNodeType.EndElement:
+                                writer.WriteFullEndElement();
+                                break;
+                            case XmlNodeType.Text:
+                                writer.WriteString(reader.Value);
+                                break;
+                            case XmlNodeType.CDATA:
+                                writer.WriteCData(reader.Value);
+                                break;
+                            case XmlNodeType.Comment:
+                                writer.WriteComment(reader.Value);
+                                break;
+                            case XmlNodeType.ProcessingInstruction:
+                                writer.WriteProcessingInstruction(reader.Name, reader.Value);
+                                break;
+                            case XmlNodeType.XmlDeclaration:
+                                writer.WriteProcessingInstruction(reader.Name, reader.Value);
+                                break;
+                            case XmlNodeType.Whitespace:
+                            case XmlNodeType.SignificantWhitespace:
+                                writer.WriteWhitespace(reader.Value);
+                                break;
+                        }
+                    }
+                }
+                return sb.ToString();
+            }
+        }
+
+        private static string UnWrapXMLLightweight(string textValue)
+        {
             var sb = new StringBuilder(textValue.Length + (textValue.Length / 4));
             int indent = 0;
             int i = 0;

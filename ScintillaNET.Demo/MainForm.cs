@@ -962,8 +962,8 @@ namespace ScintillaNET.Demo {
 			}
         }
 
-        private void unWrapXMLToolStripMenuItem_Click(object sender, EventArgs e)
-        {
+		private void unWrapXMLToolStripMenuItem_Click(object sender, EventArgs e)
+		{
 			InitSyntaxColoringXML();
 			TextArea.Text = FileUtils.UnWrapXML(TextArea.Text);
 		}
@@ -972,6 +972,44 @@ namespace ScintillaNET.Demo {
 		{
 			InitSyntaxColoringXML();
 			TextArea.Text = FileUtils.UnWrapXML(TextArea.Text);
+		}
+
+		private void unWrapXMLFileToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			string curFile = FileUtils.CurFileName;
+			if (string.IsNullOrEmpty(curFile) || !File.Exists(curFile))
+			{
+				MessageBox.Show("No file is currently loaded.", "UnWrap XML File", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				return;
+			}
+
+			this.Cursor = Cursors.WaitCursor;
+			try
+			{
+				string tempFile = FileUtils.UnwrapXmlToTempFile(curFile);
+				if (string.IsNullOrEmpty(FileUtils.OriginalFileName))
+					FileUtils.OriginalFileName = curFile;
+				FileUtils.CurFileName = tempFile;
+				FileInfo tempFi = new FileInfo(tempFile);
+				FileUtils.fileSize = tempFi.Length;
+				FileUtils.fileHasLineBreaks = true;
+				FileUtils.LineOffsetIndex = null;
+				labelTotalBytes.Text = String.Format("Bytes: {0:n0}", FileUtils.fileSize);
+				int limit = getLimit();
+				if (limit > 0)
+				{
+					int totPages = (int)(FileUtils.fileSize / limit);
+					labelTotals.Text = totPages.ToString();
+					textBoxPage.Text = "0";
+					TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
+				}
+				InitSyntaxColoringXML();
+				UpdateLineNumbers(1);
+			}
+			finally
+			{
+				this.Cursor = Cursors.Default;
+			}
 		}
 
 		private void sQLStyleToolStripMenuItem_Click(object sender, EventArgs e)
