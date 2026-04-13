@@ -371,7 +371,7 @@
             this.unWrapXMLToolStripMenuItem.Name = "unWrapXMLToolStripMenuItem";
             this.unWrapXMLToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+8";
             this.unWrapXMLToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.unWrapXMLToolStripMenuItem.Text = "UnWrap XML";
+            this.unWrapXMLToolStripMenuItem.Text = "UnWrap XML Page";
             this.unWrapXMLToolStripMenuItem.Click += new System.EventHandler(this.unWrapXMLToolStripMenuItem_Click);
             // 
             // unWrapXMLFileToolStripMenuItem
