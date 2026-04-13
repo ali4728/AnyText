@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ScintillaNET.Demo")]
+[assembly: AssemblyTitle("AnyText")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("None")]
-[assembly: AssemblyProduct("ScintillaNET.Demo")]
+[assembly: AssemblyProduct("AnyText")]
 [assembly: AssemblyCopyright("Copyright © None 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
