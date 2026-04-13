@@ -1007,7 +1007,7 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
-		private void ShowError(string message, Exception ex = null)
+		public void ShowError(string message, Exception ex = null)
 		{
 			string fullMsg = ex != null ? message + " " + ex.Message : message;
 			Console.WriteLine(fullMsg);
