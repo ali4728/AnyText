@@ -1084,17 +1084,37 @@ namespace ScintillaNET.Demo {
 			sfd.Filter = "All files|*.*|Text files|*.txt|EDI files|*.edi|XML files|*.xml";
 			sfd.Title = "Save File As";
 
-			if (!string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName))
+			// Determine whether we are working from a temp file (unwrapped EDI/XML or ZIP extraction)
+			bool hasTempFile = !string.IsNullOrEmpty(FileUtils.CurFileName)
+				&& File.Exists(FileUtils.CurFileName)
+				&& (!string.IsNullOrEmpty(FileUtils.LastTempEdiDir) || !string.IsNullOrEmpty(FileUtils.LastTempZipDir));
+
+			// Use OriginalFileName for the suggested name so user doesn't see temp paths
+			string nameSource = !string.IsNullOrEmpty(FileUtils.OriginalFileName) ? FileUtils.OriginalFileName : FileUtils.CurFileName;
+			if (!string.IsNullOrEmpty(nameSource))
 			{
-				sfd.InitialDirectory = Path.GetDirectoryName(FileUtils.CurFileName);
-				string fnWoExt = Path.GetFileNameWithoutExtension(FileUtils.CurFileName);
-				string fExt = Path.GetExtension(FileUtils.CurFileName);
+				// Set initial directory to the original file's folder when possible
+				string origDir = Path.GetDirectoryName(nameSource);
+				if (!string.IsNullOrEmpty(origDir) && Directory.Exists(origDir))
+					sfd.InitialDirectory = origDir;
+
+				string fnWoExt = Path.GetFileNameWithoutExtension(nameSource);
+				string fExt = Path.GetExtension(nameSource);
 				sfd.FileName = fnWoExt + "_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + fExt;
 			}
 
 			if (sfd.ShowDialog() == DialogResult.OK)
 			{
-				File.WriteAllText(sfd.FileName, TextArea.Text);
+				if (hasTempFile)
+				{
+					// Save the full unwrapped temp file, not just the current page
+					File.Copy(FileUtils.CurFileName, sfd.FileName, true);
+				}
+				else
+				{
+					// No temp file involved — save the chunk currently displayed
+					File.WriteAllText(sfd.FileName, TextArea.Text);
+				}
 			}
 		}
 
