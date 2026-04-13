@@ -1048,7 +1048,10 @@ namespace ScintillaNET.Demo {
 
 		private void unWrapXMLFileToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			string curFile = FileUtils.CurFileName;
+			// Use original file as source — CurFileName may be a temp file that gets deleted
+			string curFile = !string.IsNullOrEmpty(FileUtils.OriginalFileName) && File.Exists(FileUtils.OriginalFileName)
+				? FileUtils.OriginalFileName
+				: FileUtils.CurFileName;
 			if (string.IsNullOrEmpty(curFile) || !File.Exists(curFile))
 			{
 				MessageBox.Show("No file is currently loaded.", "UnWrap XML File", MessageBoxButtons.OK, MessageBoxIcon.Information);
