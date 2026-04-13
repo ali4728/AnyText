@@ -1276,13 +1276,17 @@ namespace ScintillaNET.Demo {
 				Dictionary<long, string> loc;
 				EDIHelper helper = new EDIHelper();
 				if (!string.IsNullOrEmpty(curFile) && File.Exists(curFile) && helper.IsEDIFile(curFile))
-				{
-					loc = helper.SearchEDIFile(curFile, txt);
-				}
-				else
-				{
-					loc = FileUtils.SearchDisplayedText(displayedText, txt);
-				}
+					{
+						loc = helper.SearchEDIFile(curFile, txt);
+					}
+					else if (!string.IsNullOrEmpty(curFile) && File.Exists(curFile))
+					{
+						loc = FileUtils.SearchFile(curFile, txt);
+					}
+					else
+					{
+						loc = FileUtils.SearchDisplayedText(displayedText, txt);
+					}
 				args.Result = loc;
 			};
 			bgw.RunWorkerCompleted += delegate(object s, RunWorkerCompletedEventArgs args)
