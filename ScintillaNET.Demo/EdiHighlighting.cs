@@ -89,9 +89,9 @@ namespace ScintillaNET.Demo
             this.transactions = transactions;
         }
 
-        public static string UserConfigPath
+        public static string ConfigPath
         {
-            get { return Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AnyText"), "edi-highlighting.xml"); }
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "edi-highlighting.xml"); }
         }
 
         public static EdiHighlightConfiguration Load(out string warning)
@@ -99,14 +99,7 @@ namespace ScintillaNET.Demo
             warning = null;
             try
             {
-                string path = UserConfigPath;
-                if (!File.Exists(path))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    using (Stream resource = OpenDefaults())
-                    using (FileStream target = new FileStream(path, FileMode.CreateNew, FileAccess.Write))
-                        resource.CopyTo(target);
-                }
+                string path = ConfigPath;
                 using (FileStream file = new FileStream(path, FileMode.Open, FileAccess.Read))
                 {
                     if (file.Length > 1048576)
@@ -116,7 +109,7 @@ namespace ScintillaNET.Demo
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is XmlException || ex is FormatException)
             {
-                warning = "Could not load EDI highlighting configuration (" + UserConfigPath + "): " + ex.Message + ". Using built-in rules.";
+                warning = "Could not load EDI highlighting configuration (" + ConfigPath + "): " + ex.Message + ". Using built-in rules.";
                 using (Stream resource = OpenDefaults())
                     return Parse(resource);
             }

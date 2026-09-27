@@ -22,6 +22,7 @@
   <Transaction id="277" version="X214" name="277CA">
     <Boundary segment="HL" element="3" value="19" highlightSegment="true" highlightValue="true" />
     <Boundary segment="HL" element="3" value="PT" highlightSegment="true" highlightValue="true" />
+    <Highlight segment="STC" />
   </Transaction>
   <Transaction id="835" name="835 Remittance">
     <Boundary segment="CLP" highlightSegment="true" />

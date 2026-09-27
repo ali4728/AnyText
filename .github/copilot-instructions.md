@@ -23,6 +23,7 @@ The application is **NOT a full editor**. It is optimized for:
   - Next / Previous page
   - Jump to offset
 byte[] ReadChunk(string filePath, long offset, int size);
+
 ---
 
 ### Paging Mechanism
@@ -89,6 +90,7 @@ ST*...
 - Custom line numbers on margin 0 (`MarginType.RightText`), dynamically sized based on digit count
 scintilla.ReadOnly = true;
 scintilla.Text = processedChunk;
+
 ---
 
 ### Search Functionality
@@ -138,3 +140,4 @@ scintilla.Text = processedChunk;
 ## EDI Transaction Highlighting
 - For configurable EDI transaction highlighting, exclude TA1 for now as it is rarely used in the user's business.
 - Prioritize ST-based transactions such as 837, 834, 277CA, 999, and 835.
+- Prefer loading editable EDI highlighting rules from `edi-highlighting.xml` beside the executable in `bin` at startup, rather than copying/loading a per-user AppData configuration. Keep the project XML copied to the output directory and restart to apply changes.

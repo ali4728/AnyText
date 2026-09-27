@@ -63,6 +63,9 @@
     <Compile Include="Utils\HotKeyManager.cs" />
     <Compile Include="Utils\SearchManager.cs" />
     <EmbeddedResource Include="edi-highlighting.xml" />
+    <Content Include="edi-highlighting.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>

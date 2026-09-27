@@ -2,7 +2,7 @@
 
 The viewer detects X12 from the fixed-width `ISA` header, not the file extension. It reads a bounded prefix for the first `GS` and `ST` segments. `ST01` identifies the transaction; `ST03`, or `GS08` when `ST03` is omitted, identifies its implementation version. Each business file is expected to contain only one transaction type. XML and other text files have no EDI highlighting.
 
-The default rules are installed on first launch to `%AppData%\AnyText\edi-highlighting.xml`. Edit this file and restart the viewer to apply changes. The View > EDI Record Boundaries toggle controls both line backgrounds and red indicators. An unrecognized transaction is still viewable but gets no transaction-specific highlighting. If the file cannot be read or has invalid XML/rules, the viewer reports a warning in the bottom pane and uses the bundled defaults without replacing the user's file.
+At startup the viewer reads `edi-highlighting.xml` beside `AnyText.exe` (for example, `ScintillaNET.Demo\bin\Debug\edi-highlighting.xml`). The build copies `ScintillaNET.Demo\edi-highlighting.xml` there when the project file is newer than the output copy. Edit the XML beside the executable and restart the viewer to apply changes without recompiling; if you edit the project copy instead, build again to update the output. Rebuilds and deployments can replace an edited output copy when the project copy is newer. The old `%AppData%\AnyText\edi-highlighting.xml` is no longer read or modified. The View > EDI Record Boundaries toggle controls both line backgrounds and red indicators. An unrecognized transaction is still viewable but gets no transaction-specific highlighting. If the output XML is missing or invalid, the viewer reports a warning in the bottom pane and uses the embedded defaults without overwriting the output file.
 
 ## Default rules
 
@@ -10,7 +10,7 @@ The default rules are installed on first launch to `%AppData%\AnyText\edi-highli
 | --- | --- | --- |
 | 837 Institutional (`X223`), Professional (`X222`), or generic 837 | `HL03=22` | `CLM`, `LX` |
 | 834 | `INS` | `HD` |
-| 277CA (`X214`) | `HL03=19` or `HL03=PT` | Matching `HL` and `HL03` |
+| 277CA (`X214`) | `HL03=19` or `HL03=PT` | Matching `HL` and `HL03`, plus `STC` |
 | 835 | `CLP` | `CLP`, `SVC` |
 | 999 | `AK2` | `AK2`, `IK3`, `IK4`, `IK5`, `AK9` |
 
