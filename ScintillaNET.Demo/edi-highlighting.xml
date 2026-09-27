@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EdiHighlighting>
+  <Transaction id="837" version="X223" name="837 Institutional">
+    <Boundary segment="HL" element="3" value="22" />
+    <Highlight segment="CLM" />
+    <Highlight segment="LX" />
+  </Transaction>
+  <Transaction id="837" version="X222" name="837 Professional">
+    <Boundary segment="HL" element="3" value="22" />
+    <Highlight segment="CLM" />
+    <Highlight segment="LX" />
+  </Transaction>
+  <Transaction id="837" name="837">
+    <Boundary segment="HL" element="3" value="22" />
+    <Highlight segment="CLM" />
+    <Highlight segment="LX" />
+  </Transaction>
+  <Transaction id="834" name="834 Enrollment">
+    <Boundary segment="INS" />
+    <Highlight segment="HD" />
+  </Transaction>
+  <Transaction id="277" version="X214" name="277CA">
+    <Boundary segment="HL" element="3" value="19" highlightSegment="true" highlightValue="true" />
+    <Boundary segment="HL" element="3" value="PT" highlightSegment="true" highlightValue="true" />
+  </Transaction>
+  <Transaction id="835" name="835 Remittance">
+    <Boundary segment="CLP" highlightSegment="true" />
+    <Highlight segment="SVC" />
+  </Transaction>
+  <Transaction id="999" name="999 Acknowledgment">
+    <Boundary segment="AK2" highlightSegment="true" />
+    <Highlight segment="IK3" />
+    <Highlight segment="IK4" />
+    <Highlight segment="IK5" />
+    <Highlight segment="AK9" />
+  </Transaction>
+</EdiHighlighting>

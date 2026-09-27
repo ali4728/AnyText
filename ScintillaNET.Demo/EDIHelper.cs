@@ -5,63 +5,81 @@ using System.Text;
 
 namespace ScintillaNET.Demo
 {
+    public sealed class X12FileContext
+    {
+        public char ElementDelimiter { get; private set; }
+        public char SegmentDelimiter { get; private set; }
+        public string TransactionId { get; internal set; }
+        public string ImplementationVersion { get; internal set; }
+
+        public X12FileContext(char elementDelimiter, char segmentDelimiter)
+        {
+            ElementDelimiter = elementDelimiter;
+            SegmentDelimiter = segmentDelimiter;
+            TransactionId = "";
+            ImplementationVersion = "";
+        }
+    }
+
     public class EDIHelper
     {
 
         public bool IsEDIFile(string filePath)
         {
-            char[] message = new char[107];
-            int charCount;
-
-
             using (StreamReader reader = new StreamReader(filePath))
             {
-                charCount = reader.ReadBlock(message, 0, 107);
-                if (charCount < 107)
-                {
-                    return false;
-                }
-                string isa = new String(message);
-                if (!isa.StartsWith("ISA"))
-                {
-                    return false;
-                }
+                return ReadIsa(reader) != null;
             }
-
-
-            return true;
-            
         }
-        public bool Is277CaFile(string filePath)
+
+        private static char[] ReadIsa(StreamReader reader)
         {
-            char[] isa = new char[107];
+            char[] isa = new char[106];
+            if (reader.ReadBlock(isa, 0, isa.Length) != isa.Length ||
+                isa[0] != 'I' || isa[1] != 'S' || isa[2] != 'A' ||
+                isa[3] != isa[103] || isa[3] == isa[105] ||
+                char.IsWhiteSpace(isa[3]) || char.IsWhiteSpace(isa[105]))
+                return null;
+            return isa;
+        }
+
+        public X12FileContext ReadFileContext(string filePath)
+        {
             using (StreamReader reader = new StreamReader(filePath))
             {
-                if (reader.ReadBlock(isa, 0, isa.Length) < isa.Length ||
-                    new string(isa, 0, 3) != "ISA")
-                    return false;
+                char[] isa = ReadIsa(reader);
+                if (isa == null)
+                    return null;
 
-                char elementDelimiter = isa[103];
-                char segmentDelimiter = isa[105];
+                X12FileContext context = new X12FileContext(isa[103], isa[105]);
                 char[] prefix = new char[65536];
                 int length = reader.ReadBlock(prefix, 0, prefix.Length);
-                string[] segments = new string(prefix, 0, length).Split(segmentDelimiter);
+                string[] segments = new string(prefix, 0, length).Split(context.SegmentDelimiter);
+                string gsVersion = "";
 
-                foreach (string segment in segments)
+                for (int i = 0; i < segments.Length - 1; i++)
                 {
-                    string[] elements = segment.TrimStart('\r', '\n', ' ').Split(elementDelimiter);
-                    if (!string.Equals(elements[0], "ST", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    if (elements.Length < 2 || elements[1] != "277")
-                        return false;
-
-                    return elements.Length < 4 || string.IsNullOrEmpty(elements[3]) ||
-                        elements[3].IndexOf("X214", StringComparison.OrdinalIgnoreCase) >= 0;
+                    string[] elements = segments[i].TrimStart('\r', '\n', ' ').Split(context.ElementDelimiter);
+                    if (string.Equals(elements[0], "GS", StringComparison.OrdinalIgnoreCase) && elements.Length > 8)
+                        gsVersion = elements[8].Trim();
+                    else if (string.Equals(elements[0], "ST", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (elements.Length > 1)
+                            context.TransactionId = elements[1].Trim();
+                        context.ImplementationVersion = elements.Length > 3 && !string.IsNullOrEmpty(elements[3])
+                            ? elements[3].Trim() : gsVersion;
+                        break;
+                    }
                 }
+                return context;
             }
+        }
 
-            return false;
+        public bool Is277CaFile(string filePath)
+        {
+            X12FileContext context = ReadFileContext(filePath);
+            return context != null && context.TransactionId == "277" &&
+                context.ImplementationVersion.IndexOf("X214", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         public string ParseFile(string filePath)
         {

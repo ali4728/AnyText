@@ -22,11 +22,7 @@ The application is **NOT a full editor**. It is optimized for:
   - First page (top of file)
   - Next / Previous page
   - Jump to offset
-
-```csharp
 byte[] ReadChunk(string filePath, long offset, int size);
-```
-
 ---
 
 ### Paging Mechanism
@@ -52,18 +48,11 @@ byte[] ReadChunk(string filePath, long offset, int size);
 - EDI detection: read first 107 chars, must start with `ISA`
 - Delimiters are positional from ISA segment (element=103, component=104, segment=105)
 
-Example:
-```
-ISA*...~GS*...~ST*...
-```
-
+Example:ISA*...~GS*...~ST*...
 Becomes:
-```
 ISA*...~
 GS*...~
 ST*...
-```
-
 #### XML
 - Large XML may be minified (single line)
 - Auto-unwrap XML files with no line breaks on first load (same as EDI)
@@ -98,12 +87,8 @@ ST*...
   - Efficient text display
   - Large text handling
 - Custom line numbers on margin 0 (`MarginType.RightText`), dynamically sized based on digit count
-
-```csharp
 scintilla.ReadOnly = true;
 scintilla.Text = processedChunk;
-```
-
 ---
 
 ### Search Functionality
@@ -135,7 +120,6 @@ scintilla.Text = processedChunk;
 - No editing features
 - Focus on speed and responsiveness
 
-
 ---
 
 ## AI Agent Tasks
@@ -147,4 +131,10 @@ scintilla.Text = processedChunk;
   - ScintillaNET integration
 - Ensure:
   - High performance
-  - Don's ask for permission to build. Just build the components as needed to achieve the goals outlined above.
+  - Don't ask for permission to build. Just build the components as needed to achieve the goals outlined above.
+
+---
+
+## EDI Transaction Highlighting
+- For configurable EDI transaction highlighting, exclude TA1 for now as it is rarely used in the user's business.
+- Prioritize ST-based transactions such as 837, 834, 277CA, 999, and 835.

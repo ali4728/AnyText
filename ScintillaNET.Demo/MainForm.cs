@@ -59,6 +59,10 @@ namespace ScintillaNET.Demo {
 
 			// INIT HOTKEYS
 			InitHotkeys();
+			string configWarning;
+			ediConfiguration = EdiHighlightConfiguration.Load(out configWarning);
+			if (!string.IsNullOrEmpty(configWarning))
+				ShowError(configWarning);
 
 		}
 
@@ -263,18 +267,14 @@ namespace ScintillaNET.Demo {
 			private const int EDI_RECORD_MARKER = 20;
 			private const int EDI_BOUNDARY_MARKER = 21;
 			private bool ediRecordBoundariesEnabled = false;
-			private bool is277CaFile = false;
-			private char ediElementDelimiter = '*';
+		private X12FileContext ediContext;
+		private EdiTransactionRules ediRules;
+		private EdiHighlightConfiguration ediConfiguration;
 
 			/// <summary>
 			/// Indicator index for highlighting EDI segment IDs (e.g. CLM, LX)
 			/// </summary>
 			private const int EDI_SEGMENT_ID_INDICATOR = 8;
-
-			/// <summary>
-			/// Segment IDs to highlight for 837I/837P and 834 transaction sets
-			/// </summary>
-			private static readonly string[] EDI_837_SEGMENT_IDS = new string[] { "CLM", "LX", "HD" };
 
 		/// <summary>
 		/// change this to whatever margin you want the code folding tree (+/-) to show in
@@ -344,34 +344,44 @@ namespace ScintillaNET.Demo {
 
 		private void ApplyEdiRecordBoundaries()
 		{
-			// Clear existing markers
 			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
 			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
 			ClearEdiSegmentIdHighlights();
 
-			if (!ediRecordBoundariesEnabled)
+			if (!ediRecordBoundariesEnabled || ediContext == null || ediRules == null ||
+				string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName))
 				return;
 
-			// Only apply to EDI files
-			EDIHelper ediHelper = new EDIHelper();
-			if (string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName) || !ediHelper.IsEDIFile(FileUtils.CurFileName))
-				return;
-
+			TextArea.IndicatorCurrent = EDI_SEGMENT_ID_INDICATOR;
 			int lineCount = TextArea.Lines.Count;
 			bool inOddRecord = false;
 			bool foundFirstBoundary = false;
 
 			for (int i = 0; i < lineCount; i++)
 			{
-				string lineText = TextArea.Lines[i].Text.TrimStart();
+				string lineText = TextArea.Lines[i].Text;
+				string trimmed = lineText.TrimStart();
+				int position = TextArea.Lines[i].Position + lineText.Length - trimmed.Length;
+				bool isBoundary = false;
+				foreach (EdiHighlightRule rule in ediRules.Rules)
+				{
+					int valueStart, valueLength;
+					if (!rule.Matches(trimmed, ediContext.ElementDelimiter, ediContext.SegmentDelimiter, out valueStart, out valueLength))
+						continue;
+					if (rule.IsBoundary)
+						isBoundary = true;
+					if (rule.HighlightSegment)
+						TextArea.IndicatorFillRange(position, rule.Segment.Length);
+					if (rule.HighlightValue && valueLength > 0)
+						TextArea.IndicatorFillRange(position + valueStart, valueLength);
+				}
 
-				if (IsEdiBoundaryLine(lineText))
+				if (isBoundary)
 				{
 					if (foundFirstBoundary)
 						inOddRecord = !inOddRecord;
 					foundFirstBoundary = true;
 
-					// Mark boundary line
 					TextArea.Lines[i].MarkerAdd(EDI_BOUNDARY_MARKER);
 				}
 				else if (inOddRecord)
@@ -379,69 +389,6 @@ namespace ScintillaNET.Demo {
 					TextArea.Lines[i].MarkerAdd(EDI_RECORD_MARKER);
 				}
 			}
-
-			ApplyEdiSegmentIdHighlights();
-		}
-
-		/// <summary>
-		/// Checks if a line is an EDI record boundary.
-		/// 834: INS segment starts a new member record.
-		/// 837: HL segment with HL03=22 (subscriber level) starts a new claim record.
-		/// 277CA: HL03=19 or PT starts a provider or patient section.
-		/// </summary>
-		private bool IsEdiBoundaryLine(string lineText)
-		{
-			if (string.IsNullOrEmpty(lineText))
-				return false;
-
-			// 834 rule: INS* segment
-			if (!is277CaFile && lineText.Length > 3
-				&& lineText.StartsWith("INS", StringComparison.OrdinalIgnoreCase)
-				&& (lineText[3] == '*' || lineText[3] == '~'))
-				return true;
-
-			char elementDelimiter = is277CaFile ? ediElementDelimiter : '*';
-			// 837 rule: HL03=22; 277CA rule: HL03=19 or PT
-			if (lineText.Length > 2
-				&& lineText.StartsWith("HL", StringComparison.OrdinalIgnoreCase)
-				&& lineText[2] == elementDelimiter)
-			{
-				// Split into elements: HL, HL01, HL02, HL03, ...
-				// Only need first 4 elements
-				int elementCount = 0;
-				int startIdx = 0;
-				for (int c = 0; c < lineText.Length; c++)
-				{
-					if (lineText[c] == elementDelimiter || lineText[c] == '~')
-					{
-						elementCount++;
-						if (elementCount == 3) // found start of HL03
-						{
-							startIdx = c + 1;
-						}
-						else if (elementCount == 4) // found end of HL03
-						{
-							string hl03 = lineText.Substring(startIdx, c - startIdx);
-							return IsBoundaryHl03(hl03);
-						}
-					}
-				}
-				// HL03 might be the last element (no trailing delimiter)
-				if (elementCount == 3 && startIdx < lineText.Length)
-				{
-					string hl03 = lineText.Substring(startIdx).TrimEnd('\r', '\n', '~');
-					return IsBoundaryHl03(hl03);
-				}
-			}
-
-			return false;
-		}
-
-		private bool IsBoundaryHl03(string hl03)
-		{
-			return is277CaFile
-				? hl03 == "19" || string.Equals(hl03, "PT", StringComparison.OrdinalIgnoreCase)
-				: hl03 == "22";
 		}
 
 		private void ClearEdiRecordBoundaries()
@@ -449,54 +396,6 @@ namespace ScintillaNET.Demo {
 			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
 			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
 			ClearEdiSegmentIdHighlights();
-		}
-
-		/// <summary>
-		/// Highlights the segment ID (e.g. CLM, LX, HD) at the start of matching EDI lines
-		/// with a red rounded-box indicator for 837I/837P and 834 transaction sets.
-		/// </summary>
-		private void ApplyEdiSegmentIdHighlights()
-		{
-			TextArea.IndicatorCurrent = EDI_SEGMENT_ID_INDICATOR;
-
-			int lineCount = TextArea.Lines.Count;
-			for (int i = 0; i < lineCount; i++)
-			{
-				string lineText = TextArea.Lines[i].Text;
-				string trimmed = lineText.TrimStart();
-				if (string.IsNullOrEmpty(trimmed))
-					continue;
-
-				int leadingSpaces = lineText.Length - trimmed.Length;
-				int pos = TextArea.Lines[i].Position + leadingSpaces;
-
-				if (is277CaFile)
-				{
-					if (IsEdiBoundaryLine(trimmed) && trimmed.StartsWith("HL", StringComparison.OrdinalIgnoreCase))
-					{
-						TextArea.IndicatorFillRange(pos, 2);
-						int elementStart = trimmed.IndexOf(ediElementDelimiter, 3);
-						if (elementStart >= 0)
-						{
-							elementStart = trimmed.IndexOf(ediElementDelimiter, elementStart + 1);
-							if (elementStart >= 0)
-								TextArea.IndicatorFillRange(pos + elementStart + 1, 2);
-						}
-					}
-					continue;
-				}
-
-				foreach (string segId in EDI_837_SEGMENT_IDS)
-				{
-					if (trimmed.Length > segId.Length
-						&& trimmed.StartsWith(segId, StringComparison.OrdinalIgnoreCase)
-						&& (trimmed[segId.Length] == '*' || trimmed[segId.Length] == '~'))
-					{
-						TextArea.IndicatorFillRange(pos, segId.Length);
-						break;
-					}
-				}
-			}
 		}
 
 		private void ClearEdiSegmentIdHighlights()
@@ -601,8 +500,8 @@ namespace ScintillaNET.Demo {
 		}
 		private void LoadDataFromFile(string path) {
 			richTextBoxBottom.Text = "";
-			is277CaFile = false;
-			ediElementDelimiter = '*';
+			ediContext = null;
+			ediRules = null;
 			FileUtils.CurFileName = path;
 			FileUtils.fileHasLineBreaks = false;
 			FileUtils.CleanupTempEdiDir();
@@ -685,9 +584,9 @@ namespace ScintillaNET.Demo {
 
 					if (limit > 0)
 					{
-						is277CaFile = new EDIHelper().Is277CaFile(path);
-						if (is277CaFile)
-							ediElementDelimiter = new Delimeters(path).ElementDelimeter;
+						EDIHelper ediHelper = new EDIHelper();
+						ediContext = ediHelper.ReadFileContext(path);
+						ediRules = ediConfiguration.Select(ediContext);
 						if (FileUtils.GCTrigger == 5)
 						{
 							System.GC.Collect();
@@ -701,14 +600,12 @@ namespace ScintillaNET.Demo {
 						// Auto-unwrap EDI files with no line breaks to temp file
 						if (!FileUtils.fileHasLineBreaks)
 						{
-							EDIHelper ediHelper = new EDIHelper();
-							if (ediHelper.IsEDIFile(path))
+							if (ediContext != null)
 							{
 								this.Cursor = Cursors.WaitCursor;
 								try
 								{
-									Delimeters del = new Delimeters(path);
-									string tempFile = FileUtils.UnwrapEdiToTempFile(path, del.SegmentDelimeter);
+									string tempFile = FileUtils.UnwrapEdiToTempFile(path, ediContext.SegmentDelimiter);
 									FileUtils.OriginalFileName = path;
 									FileUtils.CurFileName = tempFile;
 									FileInfo tempFi = new FileInfo(tempFile);
@@ -766,6 +663,7 @@ namespace ScintillaNET.Demo {
 				catch (Exception ex)
 				{
 					ShowError("Error reading file:", ex);
+					return;
 				}
 
 				TextArea.Text = File.ReadAllText(path);
