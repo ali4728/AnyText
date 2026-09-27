@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<EdiHighlighting>
+<EdiHighlighting defaultBoundaryColor="#C8E1FF" defaultHighlightColor="#FF0000">
   <Transaction id="837" version="X223" name="837 Institutional">
     <Boundary segment="HL" element="3" value="22" />
     <Highlight segment="CLM" />
@@ -19,9 +19,9 @@
     <Boundary segment="INS" />
     <Highlight segment="HD" />
   </Transaction>
-  <Transaction id="277" version="X214" name="277CA">
-    <Boundary segment="HL" element="3" value="19" highlightSegment="true" highlightValue="true" />
-    <Boundary segment="HL" element="3" value="PT" highlightSegment="true" highlightValue="true" />
+  <Transaction id="277" version="X214" name="277CA">    
+    <Boundary segment="HL" element="3" value="PT"/>
+    <Highlight segment="HL" element="3" value="19" highlightValue="true" />
     <Highlight segment="STC" />
   </Transaction>
   <Transaction id="835" name="835 Remittance">
@@ -33,6 +33,6 @@
     <Highlight segment="IK3" />
     <Highlight segment="IK4" />
     <Highlight segment="IK5" />
-    <Highlight segment="AK9" />
+    <Highlight segment="AK9" color="#90EE90" />
   </Transaction>
 </EdiHighlighting>

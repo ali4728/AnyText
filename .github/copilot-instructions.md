@@ -49,7 +49,7 @@ byte[] ReadChunk(string filePath, long offset, int size);
 - EDI detection: read first 107 chars, must start with `ISA`
 - Delimiters are positional from ISA segment (element=103, component=104, segment=105)
 
-Example:ISA*...~GS*...~ST*...
+Example: ISA*...~GS*...~ST*...
 Becomes:
 ISA*...~
 GS*...~
@@ -141,3 +141,4 @@ scintilla.Text = processedChunk;
 - For configurable EDI transaction highlighting, exclude TA1 for now as it is rarely used in the user's business.
 - Prioritize ST-based transactions such as 837, 834, 277CA, 999, and 835.
 - Prefer loading editable EDI highlighting rules from `edi-highlighting.xml` beside the executable in `bin` at startup, rather than copying/loading a per-user AppData configuration. Keep the project XML copied to the output directory and restart to apply changes.
+- For EDI segment/value highlighting, preserve the original text foreground color (black in the shown examples); configurable highlight colors should color only the rounded-box indicator, not recolor the text.

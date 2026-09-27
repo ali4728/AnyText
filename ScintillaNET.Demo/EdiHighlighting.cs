@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Xml;
@@ -15,8 +17,10 @@ namespace ScintillaNET.Demo
         public bool IsBoundary { get; private set; }
         public bool HighlightSegment { get; private set; }
         public bool HighlightValue { get; private set; }
+        public Color BoundaryColor { get; private set; }
+        public Color HighlightColor { get; private set; }
 
-        public EdiHighlightRule(string segment, int element, string value, bool isBoundary, bool highlightSegment, bool highlightValue)
+        public EdiHighlightRule(string segment, int element, string value, bool isBoundary, bool highlightSegment, bool highlightValue, Color boundaryColor, Color highlightColor)
         {
             Segment = segment;
             Element = element;
@@ -24,6 +28,8 @@ namespace ScintillaNET.Demo
             IsBoundary = isBoundary;
             HighlightSegment = highlightSegment;
             HighlightValue = highlightValue;
+            BoundaryColor = boundaryColor;
+            HighlightColor = highlightColor;
         }
 
         public bool Matches(string line, char elementDelimiter, char segmentDelimiter, out int valueStart, out int valueLength)
@@ -69,13 +75,17 @@ namespace ScintillaNET.Demo
         public string Version { get; private set; }
         public string Name { get; private set; }
         public IList<EdiHighlightRule> Rules { get; private set; }
+        public Color DefaultBoundaryColor { get; private set; }
+        public Color DefaultHighlightColor { get; private set; }
 
-        public EdiTransactionRules(string id, string version, string name, IList<EdiHighlightRule> rules)
+        public EdiTransactionRules(string id, string version, string name, IList<EdiHighlightRule> rules, Color defaultBoundaryColor, Color defaultHighlightColor)
         {
             Id = id;
             Version = version;
             Name = name;
             Rules = rules;
+            DefaultBoundaryColor = defaultBoundaryColor;
+            DefaultHighlightColor = defaultHighlightColor;
         }
     }
 
@@ -134,6 +144,8 @@ namespace ScintillaNET.Demo
 
             if (document.Root == null || document.Root.Name != "EdiHighlighting")
                 throw new FormatException("Expected an EdiHighlighting root element.");
+            Color defaultBoundaryColor = ReadColor(document.Root, "defaultBoundaryColor", Color.FromArgb(200, 225, 255));
+            Color defaultHighlightColor = ReadColor(document.Root, "defaultHighlightColor", Color.Red);
             IList<EdiTransactionRules> transactions = new List<EdiTransactionRules>();
             foreach (XElement transaction in document.Root.Elements())
             {
@@ -147,7 +159,11 @@ namespace ScintillaNET.Demo
                     if (existing.Id == id && string.Equals(existing.Version, version, StringComparison.OrdinalIgnoreCase))
                         throw new FormatException("Duplicate transaction rule: " + id + " " + version);
 
+                Color transactionBoundaryColor = ReadColor(transaction, "defaultBoundaryColor", defaultBoundaryColor);
+                Color transactionHighlightColor = ReadColor(transaction, "defaultHighlightColor", defaultHighlightColor);
                 IList<EdiHighlightRule> rules = new List<EdiHighlightRule>();
+                HashSet<Color> boundaryColors = new HashSet<Color>();
+                HashSet<Color> highlightColors = new HashSet<Color>();
                 foreach (XElement element in transaction.Elements())
                 {
                     bool boundary = element.Name == "Boundary";
@@ -169,9 +185,17 @@ namespace ScintillaNET.Demo
                     bool markValue = ReadBool(element, "highlightValue", false);
                     if (markValue && index == 0)
                         throw new FormatException("highlightValue requires an element match.");
-                    rules.Add(new EdiHighlightRule(segment, index, value, boundary, markSegment, markValue));
+                    Color ruleBoundaryColor = boundary ? ReadColor(element, "color", transactionBoundaryColor) : transactionBoundaryColor;
+                    Color ruleHighlightColor = ReadColor(element, "color", transactionHighlightColor);
+                    if (boundary)
+                        boundaryColors.Add(ruleBoundaryColor);
+                    if (markSegment || markValue)
+                        highlightColors.Add(ruleHighlightColor);
+                    rules.Add(new EdiHighlightRule(segment, index, value, boundary, markSegment, markValue, ruleBoundaryColor, ruleHighlightColor));
                 }
-                transactions.Add(new EdiTransactionRules(id, version, (string)transaction.Attribute("name") ?? id, rules));
+                if (boundaryColors.Count > 6 || highlightColors.Count > 11)
+                    throw new FormatException("Transaction " + id + " exceeds the limit of 6 boundary or 11 highlight colors.");
+                transactions.Add(new EdiTransactionRules(id, version, (string)transaction.Attribute("name") ?? id, rules, transactionBoundaryColor, transactionHighlightColor));
             }
             if (transactions.Count == 0)
                 throw new FormatException("At least one transaction rule is required.");
@@ -187,6 +211,27 @@ namespace ScintillaNET.Demo
             if (!bool.TryParse(text, out value))
                 throw new FormatException("Invalid " + name + " value: " + text);
             return value;
+        }
+
+        private static Color ReadColor(XElement element, string name, Color inherited)
+        {
+            string text = (string)element.Attribute(name);
+            if (text == null)
+                return inherited;
+            text = text.Trim();
+            if (text.Length == 7 && text[0] == '#')
+            {
+                int rgb;
+                if (int.TryParse(text.Substring(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out rgb))
+                    return Color.FromArgb((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255);
+            }
+            else
+            {
+                Color named = Color.FromName(text);
+                if (named.IsKnownColor && named != Color.Transparent)
+                    return named;
+            }
+            throw new FormatException("Invalid " + name + " color: " + text + ". Use #RRGGBB or a named color.");
         }
 
         public EdiTransactionRules Select(X12FileContext context)

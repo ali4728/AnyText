@@ -264,8 +264,10 @@ namespace ScintillaNET.Demo {
 		/// <summary>
 		/// Marker for alternating EDI record background (odd records)
 			/// </summary>
-			private const int EDI_RECORD_MARKER = 20;
-			private const int EDI_BOUNDARY_MARKER = 21;
+		private const int EDI_RECORD_MARKER = 20;
+		private const int EDI_BOUNDARY_MARKER = 21;
+		private const int EDI_LAST_MARKER = 31;
+		private const int EDI_LAST_INDICATOR = 31;
 			private bool ediRecordBoundariesEnabled = false;
 		private X12FileContext ediContext;
 		private EdiTransactionRules ediRules;
@@ -274,7 +276,7 @@ namespace ScintillaNET.Demo {
 			/// <summary>
 			/// Indicator index for highlighting EDI segment IDs (e.g. CLM, LX)
 			/// </summary>
-			private const int EDI_SEGMENT_ID_INDICATOR = 8;
+			private const int EDI_SEGMENT_ID_INDICATOR = 9;
 
 		/// <summary>
 		/// change this to whatever margin you want the code folding tree (+/-) to show in
@@ -323,39 +325,69 @@ namespace ScintillaNET.Demo {
 
 		private void InitEdiRecordMarkers()
 		{
-			// Marker for alternating record background (subtle tint)
-			var recordMarker = TextArea.Markers[EDI_RECORD_MARKER];
-			recordMarker.Symbol = MarkerSymbol.Background;
-			recordMarker.SetBackColor(Color.FromArgb(232, 242, 254)); // light blue tint
+			// Colors are assigned for the selected transaction when a page is displayed.
+		}
 
-			// Marker for boundary line (slightly stronger)
-			var boundaryMarker = TextArea.Markers[EDI_BOUNDARY_MARKER];
-			boundaryMarker.Symbol = MarkerSymbol.Background;
-			boundaryMarker.SetBackColor(Color.FromArgb(200, 225, 255)); // stronger blue for boundary line
+		private int GetEdiBoundaryMarker(Color color, Dictionary<Color, int> markers)
+		{
+			int marker;
+			if (markers.TryGetValue(color, out marker))
+				return marker;
+			marker = EDI_RECORD_MARKER + markers.Count * 2;
+			if (marker + 1 > EDI_LAST_MARKER)
+				throw new InvalidOperationException("Too many EDI boundary colors (maximum 6 per transaction).");
+			markers.Add(color, marker);
+			var region = TextArea.Markers[marker];
+			region.Symbol = MarkerSymbol.Background;
+			region.SetBackColor(Color.FromArgb((color.R * 42 + 255 * 58) / 100,
+				(color.G * 42 + 255 * 58) / 100, (color.B * 42 + 255 * 58) / 100));
+			var boundary = TextArea.Markers[marker + 1];
+			boundary.Symbol = MarkerSymbol.Background;
+			boundary.SetBackColor(color);
+			return marker;
+		}
 
-			// Indicator for EDI segment IDs (red rounded box)
-			var segIndicator = TextArea.Indicators[EDI_SEGMENT_ID_INDICATOR];
-			segIndicator.Style = IndicatorStyle.RoundBox;
-			segIndicator.ForeColor = Color.Red;
-			segIndicator.OutlineAlpha = 255;
-			segIndicator.Alpha = 60;
-			segIndicator.Under = true;
+		private int GetEdiHighlightIndicator(Color color, Dictionary<Color, int> indicators)
+		{
+			int indicator;
+			if (indicators.TryGetValue(color, out indicator))
+				return indicator;
+			indicator = EDI_SEGMENT_ID_INDICATOR + indicators.Count * 2;
+			if (indicator + 1 > EDI_LAST_INDICATOR)
+				throw new InvalidOperationException("Too many EDI highlight colors (maximum 11 per transaction).");
+			indicators.Add(color, indicator);
+			var box = TextArea.Indicators[indicator];
+			box.Style = IndicatorStyle.RoundBox;
+			box.ForeColor = color;
+			box.OutlineAlpha = 255;
+			box.Alpha = 60;
+			box.Under = true;
+			return indicator;
+		}
+
+		private void HighlightEdiRange(int start, int length, Color color, Dictionary<Color, int> indicators)
+		{
+			int indicator = GetEdiHighlightIndicator(color, indicators);
+			TextArea.IndicatorCurrent = indicator;
+			TextArea.IndicatorFillRange(start, length);
 		}
 
 		private void ApplyEdiRecordBoundaries()
 		{
-			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
-			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
+			for (int marker = EDI_RECORD_MARKER; marker <= EDI_LAST_MARKER; marker++)
+				TextArea.MarkerDeleteAll(marker);
 			ClearEdiSegmentIdHighlights();
 
 			if (!ediRecordBoundariesEnabled || ediContext == null || ediRules == null ||
 				string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName))
 				return;
 
-			TextArea.IndicatorCurrent = EDI_SEGMENT_ID_INDICATOR;
+			Dictionary<Color, int> boundaryMarkers = new Dictionary<Color, int>();
+			Dictionary<Color, int> highlightIndicators = new Dictionary<Color, int>();
 			int lineCount = TextArea.Lines.Count;
 			bool inOddRecord = false;
 			bool foundFirstBoundary = false;
+			int activeRegionMarker = EDI_RECORD_MARKER;
 
 			for (int i = 0; i < lineCount; i++)
 			{
@@ -363,17 +395,22 @@ namespace ScintillaNET.Demo {
 				string trimmed = lineText.TrimStart();
 				int position = TextArea.Lines[i].Position + lineText.Length - trimmed.Length;
 				bool isBoundary = false;
+				int boundaryMarker = EDI_BOUNDARY_MARKER;
 				foreach (EdiHighlightRule rule in ediRules.Rules)
 				{
 					int valueStart, valueLength;
 					if (!rule.Matches(trimmed, ediContext.ElementDelimiter, ediContext.SegmentDelimiter, out valueStart, out valueLength))
 						continue;
 					if (rule.IsBoundary)
+					{
 						isBoundary = true;
+						activeRegionMarker = GetEdiBoundaryMarker(rule.BoundaryColor, boundaryMarkers);
+						boundaryMarker = activeRegionMarker + 1;
+					}
 					if (rule.HighlightSegment)
-						TextArea.IndicatorFillRange(position, rule.Segment.Length);
+						HighlightEdiRange(position, rule.Segment.Length, rule.HighlightColor, highlightIndicators);
 					if (rule.HighlightValue && valueLength > 0)
-						TextArea.IndicatorFillRange(position + valueStart, valueLength);
+						HighlightEdiRange(position + valueStart, valueLength, rule.HighlightColor, highlightIndicators);
 				}
 
 				if (isBoundary)
@@ -382,26 +419,29 @@ namespace ScintillaNET.Demo {
 						inOddRecord = !inOddRecord;
 					foundFirstBoundary = true;
 
-					TextArea.Lines[i].MarkerAdd(EDI_BOUNDARY_MARKER);
+					TextArea.Lines[i].MarkerAdd(boundaryMarker);
 				}
 				else if (inOddRecord)
 				{
-					TextArea.Lines[i].MarkerAdd(EDI_RECORD_MARKER);
+					TextArea.Lines[i].MarkerAdd(activeRegionMarker);
 				}
 			}
 		}
 
 		private void ClearEdiRecordBoundaries()
 		{
-			TextArea.MarkerDeleteAll(EDI_RECORD_MARKER);
-			TextArea.MarkerDeleteAll(EDI_BOUNDARY_MARKER);
+			for (int marker = EDI_RECORD_MARKER; marker <= EDI_LAST_MARKER; marker++)
+				TextArea.MarkerDeleteAll(marker);
 			ClearEdiSegmentIdHighlights();
 		}
 
 		private void ClearEdiSegmentIdHighlights()
 		{
-			TextArea.IndicatorCurrent = EDI_SEGMENT_ID_INDICATOR;
-			TextArea.IndicatorClearRange(0, TextArea.TextLength);
+			for (int indicator = EDI_SEGMENT_ID_INDICATOR; indicator <= EDI_LAST_INDICATOR; indicator++)
+			{
+				TextArea.IndicatorCurrent = indicator;
+				TextArea.IndicatorClearRange(0, TextArea.TextLength);
+			}
 		}
 
 		private void InitCodeFolding() {
