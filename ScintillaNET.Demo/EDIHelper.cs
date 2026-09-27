@@ -32,6 +32,37 @@ namespace ScintillaNET.Demo
             return true;
             
         }
+        public bool Is277CaFile(string filePath)
+        {
+            char[] isa = new char[107];
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                if (reader.ReadBlock(isa, 0, isa.Length) < isa.Length ||
+                    new string(isa, 0, 3) != "ISA")
+                    return false;
+
+                char elementDelimiter = isa[103];
+                char segmentDelimiter = isa[105];
+                char[] prefix = new char[65536];
+                int length = reader.ReadBlock(prefix, 0, prefix.Length);
+                string[] segments = new string(prefix, 0, length).Split(segmentDelimiter);
+
+                foreach (string segment in segments)
+                {
+                    string[] elements = segment.TrimStart('\r', '\n', ' ').Split(elementDelimiter);
+                    if (!string.Equals(elements[0], "ST", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (elements.Length < 2 || elements[1] != "277")
+                        return false;
+
+                    return elements.Length < 4 || string.IsNullOrEmpty(elements[3]) ||
+                        elements[3].IndexOf("X214", StringComparison.OrdinalIgnoreCase) >= 0;
+                }
+            }
+
+            return false;
+        }
         public string ParseFile(string filePath)
         {
             Delimeters del = new Delimeters(filePath);

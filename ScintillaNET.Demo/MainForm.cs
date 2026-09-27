@@ -263,6 +263,8 @@ namespace ScintillaNET.Demo {
 			private const int EDI_RECORD_MARKER = 20;
 			private const int EDI_BOUNDARY_MARKER = 21;
 			private bool ediRecordBoundariesEnabled = false;
+			private bool is277CaFile = false;
+			private char ediElementDelimiter = '*';
 
 			/// <summary>
 			/// Indicator index for highlighting EDI segment IDs (e.g. CLM, LX)
@@ -385,6 +387,7 @@ namespace ScintillaNET.Demo {
 		/// Checks if a line is an EDI record boundary.
 		/// 834: INS segment starts a new member record.
 		/// 837: HL segment with HL03=22 (subscriber level) starts a new claim record.
+		/// 277CA: HL03=19 or PT starts a provider or patient section.
 		/// </summary>
 		private bool IsEdiBoundaryLine(string lineText)
 		{
@@ -392,15 +395,16 @@ namespace ScintillaNET.Demo {
 				return false;
 
 			// 834 rule: INS* segment
-			if (lineText.Length > 3
+			if (!is277CaFile && lineText.Length > 3
 				&& lineText.StartsWith("INS", StringComparison.OrdinalIgnoreCase)
 				&& (lineText[3] == '*' || lineText[3] == '~'))
 				return true;
 
-			// 837 rule: HL*{any}*{any}*22  (HL03 = 22, subscriber level)
+			char elementDelimiter = is277CaFile ? ediElementDelimiter : '*';
+			// 837 rule: HL03=22; 277CA rule: HL03=19 or PT
 			if (lineText.Length > 2
 				&& lineText.StartsWith("HL", StringComparison.OrdinalIgnoreCase)
-				&& lineText[2] == '*')
+				&& lineText[2] == elementDelimiter)
 			{
 				// Split into elements: HL, HL01, HL02, HL03, ...
 				// Only need first 4 elements
@@ -408,7 +412,7 @@ namespace ScintillaNET.Demo {
 				int startIdx = 0;
 				for (int c = 0; c < lineText.Length; c++)
 				{
-					if (lineText[c] == '*' || lineText[c] == '~')
+					if (lineText[c] == elementDelimiter || lineText[c] == '~')
 					{
 						elementCount++;
 						if (elementCount == 3) // found start of HL03
@@ -418,7 +422,7 @@ namespace ScintillaNET.Demo {
 						else if (elementCount == 4) // found end of HL03
 						{
 							string hl03 = lineText.Substring(startIdx, c - startIdx);
-							return hl03 == "22";
+							return IsBoundaryHl03(hl03);
 						}
 					}
 				}
@@ -426,11 +430,18 @@ namespace ScintillaNET.Demo {
 				if (elementCount == 3 && startIdx < lineText.Length)
 				{
 					string hl03 = lineText.Substring(startIdx).TrimEnd('\r', '\n', '~');
-					return hl03 == "22";
+					return IsBoundaryHl03(hl03);
 				}
 			}
 
 			return false;
+		}
+
+		private bool IsBoundaryHl03(string hl03)
+		{
+			return is277CaFile
+				? hl03 == "19" || string.Equals(hl03, "PT", StringComparison.OrdinalIgnoreCase)
+				: hl03 == "22";
 		}
 
 		private void ClearEdiRecordBoundaries()
@@ -457,6 +468,23 @@ namespace ScintillaNET.Demo {
 					continue;
 
 				int leadingSpaces = lineText.Length - trimmed.Length;
+				int pos = TextArea.Lines[i].Position + leadingSpaces;
+
+				if (is277CaFile)
+				{
+					if (IsEdiBoundaryLine(trimmed) && trimmed.StartsWith("HL", StringComparison.OrdinalIgnoreCase))
+					{
+						TextArea.IndicatorFillRange(pos, 2);
+						int elementStart = trimmed.IndexOf(ediElementDelimiter, 3);
+						if (elementStart >= 0)
+						{
+							elementStart = trimmed.IndexOf(ediElementDelimiter, elementStart + 1);
+							if (elementStart >= 0)
+								TextArea.IndicatorFillRange(pos + elementStart + 1, 2);
+						}
+					}
+					continue;
+				}
 
 				foreach (string segId in EDI_837_SEGMENT_IDS)
 				{
@@ -464,7 +492,6 @@ namespace ScintillaNET.Demo {
 						&& trimmed.StartsWith(segId, StringComparison.OrdinalIgnoreCase)
 						&& (trimmed[segId.Length] == '*' || trimmed[segId.Length] == '~'))
 					{
-						int pos = TextArea.Lines[i].Position + leadingSpaces;
 						TextArea.IndicatorFillRange(pos, segId.Length);
 						break;
 					}
@@ -574,6 +601,8 @@ namespace ScintillaNET.Demo {
 		}
 		private void LoadDataFromFile(string path) {
 			richTextBoxBottom.Text = "";
+			is277CaFile = false;
+			ediElementDelimiter = '*';
 			FileUtils.CurFileName = path;
 			FileUtils.fileHasLineBreaks = false;
 			FileUtils.CleanupTempEdiDir();
@@ -656,6 +685,9 @@ namespace ScintillaNET.Demo {
 
 					if (limit > 0)
 					{
+						is277CaFile = new EDIHelper().Is277CaFile(path);
+						if (is277CaFile)
+							ediElementDelimiter = new Delimeters(path).ElementDelimeter;
 						if (FileUtils.GCTrigger == 5)
 						{
 							System.GC.Collect();
