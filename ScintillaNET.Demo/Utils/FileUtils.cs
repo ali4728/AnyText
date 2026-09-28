@@ -174,6 +174,110 @@ namespace ScintillaNET.Demo.Utils
             return str;
         }
 
+        public static string ReadPaddedPage(string path, int limit, int page, out long startOffset)
+        {
+            const int maxPadding = 1048576;
+            startOffset = 0;
+            if (limit <= 0 || page < 0)
+                return "";
+
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                long windowStart = (long)page * limit;
+                if (windowStart >= fs.Length)
+                {
+                    startOffset = fs.Length;
+                    return "";
+                }
+
+                long windowEnd = Math.Min(fs.Length, windowStart + limit);
+                byte[] buffer = new byte[8192];
+                startOffset = windowStart;
+                if (windowStart > 0)
+                {
+                    long minimum = Math.Max(0, windowStart - maxPadding);
+                    long cursor = windowStart;
+                    bool found = false;
+                    while (cursor > minimum && !found)
+                    {
+                        int count = (int)Math.Min(buffer.Length, cursor - minimum);
+                        long blockStart = cursor - count;
+                        fs.Seek(blockStart, SeekOrigin.Begin);
+                        int read = fs.Read(buffer, 0, count);
+                        for (int i = read - 1; i >= 0; i--)
+                        {
+                            if (buffer[i] == (byte)'\n')
+                            {
+                                startOffset = blockStart + i + 1;
+                                found = true;
+                                break;
+                            }
+                        }
+                        cursor = blockStart;
+                    }
+                    if (!found)
+                        startOffset = minimum == 0 ? 0 : windowStart;
+                }
+
+                long endOffset = windowEnd;
+                if (windowEnd < fs.Length)
+                {
+                    fs.Seek(windowEnd - 1, SeekOrigin.Begin);
+                    if (fs.ReadByte() != '\n')
+                    {
+                        long maximum = Math.Min(fs.Length, windowEnd + maxPadding);
+                        long cursor = windowEnd;
+                        bool found = false;
+                        while (cursor < maximum && !found)
+                        {
+                            int count = (int)Math.Min(buffer.Length, maximum - cursor);
+                            fs.Seek(cursor, SeekOrigin.Begin);
+                            int read = fs.Read(buffer, 0, count);
+                            for (int i = 0; i < read; i++)
+                            {
+                                if (buffer[i] == (byte)'\n')
+                                {
+                                    endOffset = cursor + i + 1;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            cursor += read;
+                        }
+                        if (!found)
+                            endOffset = maximum == fs.Length ? fs.Length : windowEnd;
+                    }
+                }
+
+                if (startOffset > 0 && startOffset == windowStart)
+                {
+                    fs.Seek(startOffset, SeekOrigin.Begin);
+                    while (startOffset < endOffset && (fs.ReadByte() & 0xC0) == 0x80)
+                        startOffset++;
+                }
+                if (endOffset < fs.Length && endOffset == windowEnd)
+                {
+                    fs.Seek(endOffset, SeekOrigin.Begin);
+                    while (endOffset < fs.Length && (fs.ReadByte() & 0xC0) == 0x80)
+                        endOffset++;
+                }
+
+                int length = checked((int)(endOffset - startOffset));
+                byte[] bytes = new byte[length];
+                fs.Seek(startOffset, SeekOrigin.Begin);
+                int total = 0;
+                while (total < length)
+                {
+                    int read = fs.Read(bytes, total, length - total);
+                    if (read == 0)
+                        break;
+                    total += read;
+                }
+                string text = new UTF8Encoding(false).GetString(bytes, 0, total);
+                return startOffset == 0 && text.Length > 0 && text[0] == '\uFEFF' ? text.Substring(1) : text;
+            }
+        }
+
         public static string getFixWidth(string str, int width)
         {
             char[] ary = str.ToCharArray();

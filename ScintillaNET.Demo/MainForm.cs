@@ -655,8 +655,7 @@ namespace ScintillaNET.Demo {
 									labelTotalBytes.Text = String.Format("Bytes: {0:n0}", FileUtils.fileSize);
 									int totPagesEdi = (int)(FileUtils.fileSize / limit);
 									labelTotals.Text = totPagesEdi.ToString();
-									TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
-									UpdateLineNumbers(1);
+									DisplayPaddedPage(0, limit);
 									ApplyEdiRecordBoundaries();
 								}
 								finally
@@ -680,9 +679,8 @@ namespace ScintillaNET.Demo {
 									labelTotalBytes.Text = String.Format("Bytes: {0:n0}", FileUtils.fileSize);
 									int totPagesXml = (int)(FileUtils.fileSize / limit);
 									labelTotals.Text = totPagesXml.ToString();
-									TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
+									DisplayPaddedPage(0, limit);
 									InitSyntaxColoringXML();
-									UpdateLineNumbers(1);
 								}
 								finally
 								{
@@ -694,7 +692,7 @@ namespace ScintillaNET.Demo {
 
 						if (FileUtils.fileHasLineBreaks)
 						{
-							UpdateLineNumbers(1);
+							DisplayPaddedPage(0, limit);
 							ApplyEdiRecordBoundaries();
 						}
 						return;
@@ -1046,10 +1044,9 @@ namespace ScintillaNET.Demo {
 					int totPages = (int)(FileUtils.fileSize / limit);
 					labelTotals.Text = totPages.ToString();
 					textBoxPage.Text = "0";
-					TextArea.Text = FileUtils.readNBites(tempFile, limit, 0);
+					DisplayPaddedPage(0, limit);
 				}
 				InitSyntaxColoringXML();
-				UpdateLineNumbers(1);
 			}
 			finally
 			{
@@ -1187,9 +1184,8 @@ namespace ScintillaNET.Demo {
 					int limit = getLimit();
 					if (limit > 0)
 					{
-						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
+						DisplayPage(offset, limit);
 						textBoxPage.Text = page.ToString();
-						ApplyLineNumbers(page);
 						ApplyEdiRecordBoundaries();
 					}
 
@@ -1225,9 +1221,8 @@ namespace ScintillaNET.Demo {
 					int limit = getLimit();
 					if (limit > 0)
 					{
-						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
+						DisplayPage(offset, limit);
 						textBoxPage.Text = page.ToString();
-						ApplyLineNumbers(page);
 						ApplyEdiRecordBoundaries();
 					}
 
@@ -1266,9 +1261,8 @@ namespace ScintillaNET.Demo {
 					int limit = getLimit();
 					if (limit > 0)
 					{
-						TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, offset);
+						DisplayPage(offset, limit);
 						textBoxPage.Text = page.ToString();
-						ApplyLineNumbers(page);
 						ApplyEdiRecordBoundaries();
 					}
 
@@ -1696,11 +1690,24 @@ namespace ScintillaNET.Demo {
 			TextArea.Margins[NUMBER_MARGIN].Type = MarginType.Number;
 		}
 
-		private void ApplyLineNumbers(int page)
+		private void DisplayPage(int page, int limit)
+		{
+			if (FileUtils.fileHasLineBreaks)
+				DisplayPaddedPage(page, limit);
+			else
+				TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, page);
+		}
+
+		private void DisplayPaddedPage(int page, int limit)
+		{
+			long startOffset;
+			TextArea.Text = FileUtils.ReadPaddedPage(FileUtils.CurFileName, limit, page, out startOffset);
+			ApplyLineNumbers(startOffset);
+		}
+
+		private void ApplyLineNumbers(long byteOffset)
 		{
 			if (!FileUtils.fileHasLineBreaks) return;
-			int limit = getLimit();
-			if (limit <= 0) return;
 
 			// Lazy build: index is built on first page navigation
 			if (FileUtils.LineOffsetIndex == null)
@@ -1710,7 +1717,6 @@ namespace ScintillaNET.Demo {
 				this.Cursor = Cursors.Default;
 			}
 
-			long byteOffset = (long)page * limit;
 			int startLine = FileUtils.GetLineNumberAtOffset(FileUtils.CurFileName, byteOffset);
 			UpdateLineNumbers(startLine);
 		}
