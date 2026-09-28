@@ -56,6 +56,7 @@
             this.unWrapXMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.unWrapXMLFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.unWrapFixWidthToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.reloadPageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ediRecordBoundariesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.indentGuidesItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -323,6 +324,7 @@
             this.unWrapXMLToolStripMenuItem,
             this.unWrapXMLFileToolStripMenuItem,
             this.unWrapFixWidthToolStripMenuItem,
+            this.reloadPageToolStripMenuItem,
             this.ediRecordBoundariesToolStripMenuItem,
             this.toolStripSeparator6,
             this.indentGuidesItem,
@@ -387,6 +389,13 @@
             this.unWrapFixWidthToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
             this.unWrapFixWidthToolStripMenuItem.Text = "UnWrap FixWidth";
             this.unWrapFixWidthToolStripMenuItem.Click += new System.EventHandler(this.unWrapFixWidthToolStripMenuItem_Click);
+            // 
+            // reloadPageToolStripMenuItem
+            // 
+            this.reloadPageToolStripMenuItem.Name = "reloadPageToolStripMenuItem";
+            this.reloadPageToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
+            this.reloadPageToolStripMenuItem.Text = "Reload Page";
+            this.reloadPageToolStripMenuItem.Click += new System.EventHandler(this.reloadPageToolStripMenuItem_Click);
             // 
             // ediRecordBoundariesToolStripMenuItem
             // 
@@ -834,6 +843,7 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
         private System.Windows.Forms.ToolStripMenuItem unWrapFixWidthToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem reloadPageToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem ediRecordBoundariesToolStripMenuItem;
         private System.Windows.Forms.Label labelTotalBytes;
         private System.Windows.Forms.TextBox textBoxPage;

@@ -1155,6 +1155,32 @@ namespace ScintillaNET.Demo {
 			TextArea.Text = FileUtils.getFixWidth(TextArea.Text, 80);
 		}
 
+		private void reloadPageToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				int page;
+				int limit = getLimit();
+				if (string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName))
+				{
+					ShowError("No file is currently loaded.");
+					return;
+				}
+				if (limit <= 0 || !int.TryParse(textBoxPage.Text, out page) || page < 0 || (long)page * limit > FileUtils.fileSize)
+				{
+					ShowError("Invalid page or page size.");
+					return;
+				}
+
+				DisplayPage(page, limit);
+				ApplyEdiRecordBoundaries();
+			}
+			catch (Exception ex)
+			{
+				ShowError("Error reloading page:", ex);
+			}
+		}
+
 		private void ediRecordBoundariesToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			ediRecordBoundariesEnabled = !ediRecordBoundariesEnabled;
