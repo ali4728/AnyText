@@ -1,4 +1,4 @@
-# Large EDI/XML Viewer (C# + ScintillaNET)
+i# Large EDI/XML Viewer (C# + ScintillaNET)
 
 ## Overview
 A Windows desktop **read-only viewer** for very large files (500MB–2GB), specifically:
@@ -142,3 +142,4 @@ scintilla.Text = processedChunk;
 - Prioritize ST-based transactions such as 837, 834, 277CA, 999, and 835.
 - Prefer loading editable EDI highlighting rules from `edi-highlighting.xml` beside the executable in `bin` at startup, rather than copying/loading a per-user AppData configuration. Keep the project XML copied to the output directory and restart to apply changes.
 - For EDI segment/value highlighting, preserve the original text foreground color (black in the shown examples); configurable highlight colors should color only the rounded-box indicator, not recolor the text.
+- For EDI highlighting elementsToHighlight positions, use zero to denote the segment ID itself (e.g. REF/HD/CLM); positions 1, 2, 3 refer to one-based X12 element numbers (REF01, REF02, REF03).

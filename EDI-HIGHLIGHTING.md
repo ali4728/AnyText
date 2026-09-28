@@ -9,7 +9,7 @@ At startup the viewer reads `edi-highlighting.xml` beside `AnyText.exe` (for exa
 | Transaction | Boundary line | Segment/element indicators |
 | --- | --- | --- |
 | 837 Institutional (`X223`), Professional (`X222`), or generic 837 | `HL03=22` | `CLM`, `LX` |
-| 834 | `INS` | `HD` |
+| 834 | `INS` | `HD`, REF02 when REF01 is `0F` |
 | 277CA (`X214`) | `HL03=19` or `HL03=PT` | Matching `HL` and `HL03`, plus `STC` |
 | 835 | `CLP` | `CLP`, `SVC` |
 | 999 | `AK2` | `AK2`, `IK3`, `IK4`, `IK5`, `AK9` |
@@ -25,6 +25,9 @@ The root element is `EdiHighlighting`. Each `Transaction` requires a three-digit
 - Add `element="3" value="PT"` to either rule to require an exact element value (for example, `HL03=PT`). Element numbering starts at 1 after the segment ID; matching uses the file's ISA element delimiter.
 - `highlightSegment="true"` marks the segment ID. It defaults to true for `Highlight` and false for `Boundary`.
 - `highlightValue="true"` also marks the matching element value; it requires `element` and `value`.
+- `qualPosition="1" qualifier="0F"` is an alternative to `element="1" value="0F"` for matching a segment's qualifier. The two pairs cannot be combined on one rule.
+- `elementsToHighlight="2"` marks only element 2 in a matched segment; `elementsToHighlight="0,2,3"` marks the segment ID and elements 2 and 3. Position 0 means the segment ID (for example `REF`), while positions 1–99 use one-based X12 element numbering (REF01, REF02, etc.). Absent or empty elements are not marked. The list must contain distinct positions and cannot be combined with `highlightSegment` or `highlightValue`. When present, it replaces the usual default of highlighting the segment ID.
+- For example, `<Highlight segment="REF" qualifier="0F" qualPosition="1" elementsToHighlight="2" />` matches REF01=`0F` and boxes only REF02, leaving `REF`, `0F`, and the text foreground unchanged. Existing rules without these attributes behave as before.
 
 ## Colors
 

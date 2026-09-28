@@ -17,10 +17,11 @@ namespace ScintillaNET.Demo
         public bool IsBoundary { get; private set; }
         public bool HighlightSegment { get; private set; }
         public bool HighlightValue { get; private set; }
+        public int[] ElementsToHighlight { get; private set; }
         public Color BoundaryColor { get; private set; }
         public Color HighlightColor { get; private set; }
 
-        public EdiHighlightRule(string segment, int element, string value, bool isBoundary, bool highlightSegment, bool highlightValue, Color boundaryColor, Color highlightColor)
+        public EdiHighlightRule(string segment, int element, string value, bool isBoundary, bool highlightSegment, bool highlightValue, int[] elementsToHighlight, Color boundaryColor, Color highlightColor)
         {
             Segment = segment;
             Element = element;
@@ -28,6 +29,7 @@ namespace ScintillaNET.Demo
             IsBoundary = isBoundary;
             HighlightSegment = highlightSegment;
             HighlightValue = highlightValue;
+            ElementsToHighlight = elementsToHighlight;
             BoundaryColor = boundaryColor;
             HighlightColor = highlightColor;
         }
@@ -44,28 +46,40 @@ namespace ScintillaNET.Demo
             if (Element == 0)
                 return true;
 
+            return TryGetElementRange(line, elementDelimiter, segmentDelimiter, Element, out valueStart, out valueLength) &&
+                valueLength == Value.Length && string.Compare(line, valueStart, Value, 0, valueLength, StringComparison.OrdinalIgnoreCase) == 0;
+        }
+
+        public bool TryGetElementRange(string line, char elementDelimiter, char segmentDelimiter, int element, out int start, out int length)
+        {
+            start = 0;
+            length = 0;
+            if (element == 0)
+            {
+                length = Segment.Length;
+                return true;
+            }
+
             int position = Segment.Length;
-            for (int i = 1; i <= Element; i++)
+            for (int i = 1; i <= element; i++)
             {
                 if (position >= line.Length || line[position] != elementDelimiter)
                     return false;
                 position++;
-                if (i < Element)
+                int end = line.IndexOfAny(new char[] { elementDelimiter, segmentDelimiter, '\r', '\n' }, position);
+                if (end < 0)
+                    end = line.Length;
+                if (i == element)
                 {
-                    int next = line.IndexOf(elementDelimiter, position);
-                    int segmentEnd = line.IndexOf(segmentDelimiter, position);
-                    if (next < 0 || (segmentEnd >= 0 && segmentEnd < next))
-                        return false;
-                    position = next;
+                    start = position;
+                    length = end - position;
+                    return true;
                 }
+                if (end >= line.Length || line[end] != elementDelimiter)
+                    return false;
+                position = end;
             }
-
-            int end = line.IndexOfAny(new char[] { elementDelimiter, segmentDelimiter, '\r', '\n' }, position);
-            if (end < 0)
-                end = line.Length;
-            valueStart = position;
-            valueLength = end - position;
-            return string.Equals(line.Substring(position, valueLength), Value, StringComparison.OrdinalIgnoreCase);
+            return false;
         }
     }
 
@@ -178,20 +192,46 @@ namespace ScintillaNET.Demo
                     int index = 0;
                     string indexText = (string)element.Attribute("element");
                     string value = (string)element.Attribute("value");
+                    string qualifier = (string)element.Attribute("qualifier");
+                    string qualPosition = (string)element.Attribute("qualPosition");
+                    if (qualifier != null || qualPosition != null)
+                    {
+                        if (indexText != null || value != null || string.IsNullOrEmpty(qualifier) || qualPosition == null)
+                            throw new FormatException("qualifier and qualPosition must be paired and cannot be combined with element and value.");
+                        indexText = qualPosition;
+                        value = qualifier;
+                    }
                     if ((indexText == null) != (value == null) ||
                         (indexText != null && (!int.TryParse(indexText, out index) || index < 1 || index > 99 || string.IsNullOrEmpty(value))))
                         throw new FormatException("A matched element requires both a positive element number and a value.");
-                    bool markSegment = ReadBool(element, "highlightSegment", !boundary);
+                    string targetsText = (string)element.Attribute("elementsToHighlight");
+                    int[] targets = null;
+                    if (targetsText != null)
+                    {
+                        if (targetsText.Length == 0)
+                            throw new FormatException("elementsToHighlight must list at least one position.");
+                        string[] parts = targetsText.Split(',');
+                        HashSet<int> unique = new HashSet<int>();
+                        targets = new int[parts.Length];
+                        for (int t = 0; t < parts.Length; t++)
+                        {
+                            if (!int.TryParse(parts[t], out targets[t]) || targets[t] < 0 || targets[t] > 99 || !unique.Add(targets[t]))
+                                throw new FormatException("elementsToHighlight must contain distinct positions from 0 to 99.");
+                        }
+                    }
+                    bool markSegment = ReadBool(element, "highlightSegment", !boundary && targets == null);
                     bool markValue = ReadBool(element, "highlightValue", false);
                     if (markValue && index == 0)
                         throw new FormatException("highlightValue requires an element match.");
+                    if (targets != null && (element.Attribute("highlightSegment") != null || element.Attribute("highlightValue") != null))
+                        throw new FormatException("elementsToHighlight cannot be combined with highlightSegment or highlightValue.");
                     Color ruleBoundaryColor = boundary ? ReadColor(element, "color", transactionBoundaryColor) : transactionBoundaryColor;
                     Color ruleHighlightColor = ReadColor(element, "color", transactionHighlightColor);
                     if (boundary)
                         boundaryColors.Add(ruleBoundaryColor);
-                    if (markSegment || markValue)
+                    if (markSegment || markValue || targets != null)
                         highlightColors.Add(ruleHighlightColor);
-                    rules.Add(new EdiHighlightRule(segment, index, value, boundary, markSegment, markValue, ruleBoundaryColor, ruleHighlightColor));
+                    rules.Add(new EdiHighlightRule(segment, index, value, boundary, markSegment, markValue, targets, ruleBoundaryColor, ruleHighlightColor));
                 }
                 if (boundaryColors.Count > 6 || highlightColors.Count > 11)
                     throw new FormatException("Transaction " + id + " exceeds the limit of 6 boundary or 11 highlight colors.");

@@ -411,6 +411,15 @@ namespace ScintillaNET.Demo {
 						HighlightEdiRange(position, rule.Segment.Length, rule.HighlightColor, highlightIndicators);
 					if (rule.HighlightValue && valueLength > 0)
 						HighlightEdiRange(position + valueStart, valueLength, rule.HighlightColor, highlightIndicators);
+					if (rule.ElementsToHighlight != null)
+					{
+						foreach (int target in rule.ElementsToHighlight)
+						{
+							int targetStart, targetLength;
+							if (rule.TryGetElementRange(trimmed, ediContext.ElementDelimiter, ediContext.SegmentDelimiter, target, out targetStart, out targetLength) && targetLength > 0)
+								HighlightEdiRange(position + targetStart, targetLength, rule.HighlightColor, highlightIndicators);
+						}
+					}
 				}
 
 				if (isBoundary)
