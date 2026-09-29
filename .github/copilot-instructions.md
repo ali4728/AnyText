@@ -1,6 +1,8 @@
-i# Large EDI/XML Viewer (C# + ScintillaNET)
+# Copilot Instructions
 
-## Overview
+## Large EDI/XML Viewer (C# + ScintillaNET)
+
+### Overview
 A Windows desktop **read-only viewer** for very large files (500MB–2GB), specifically:
 - X12 EDI files (e.g., 837I, 834)
 - XML files
@@ -21,9 +23,7 @@ The application is **NOT a full editor**. It is optimized for:
 - Support:
   - First page (top of file)
   - Next / Previous page
-  - Jump to offset
-byte[] ReadChunk(string filePath, long offset, int size);
-
+  - Jump to offsetbyte[] ReadChunk(string filePath, long offset, int size);
 ---
 
 ### Paging Mechanism
@@ -87,10 +87,8 @@ ST*...
   - Read-only mode
   - Efficient text display
   - Large text handling
-- Custom line numbers on margin 0 (`MarginType.RightText`), dynamically sized based on digit count
-scintilla.ReadOnly = true;
+- Custom line numbers on margin 0 (`MarginType.RightText`), dynamically sized based on digit countscintilla.ReadOnly = true;
 scintilla.Text = processedChunk;
-
 ---
 
 ### Search Functionality
@@ -143,3 +141,8 @@ scintilla.Text = processedChunk;
 - Prefer loading editable EDI highlighting rules from `edi-highlighting.xml` beside the executable in `bin` at startup, rather than copying/loading a per-user AppData configuration. Keep the project XML copied to the output directory and restart to apply changes.
 - For EDI segment/value highlighting, preserve the original text foreground color (black in the shown examples); configurable highlight colors should color only the rounded-box indicator, not recolor the text.
 - For EDI highlighting elementsToHighlight positions, use zero to denote the segment ID itself (e.g. REF/HD/CLM); positions 1, 2, 3 refer to one-based X12 element numbers (REF01, REF02, REF03).
+
+---
+
+## AnyText Tab Layout
+- In the AnyText tab layout, tabs (Main, Options, Utils) should contain only toolbar/input controls; the middle viewer pane and bottom results pane must remain shared and visible across all tabs.

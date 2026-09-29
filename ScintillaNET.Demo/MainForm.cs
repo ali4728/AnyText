@@ -8,6 +8,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using ScintillaNET;
 using ScintillaNET.Demo.Utils;
 
@@ -18,6 +19,9 @@ namespace ScintillaNET.Demo {
 		}
 
 		ScintillaNET.Scintilla TextArea;
+		private bool regexSearchResults;
+		private string regexSearchPattern;
+		private long displayedPageStartOffset;
 
 		private void MainForm_Load(object sender, EventArgs e) {
 
@@ -549,6 +553,8 @@ namespace ScintillaNET.Demo {
 		}
 		private void LoadDataFromFile(string path) {
 			richTextBoxBottom.Text = "";
+			regexSearchResults = false;
+			displayedPageStartOffset = 0;
 			ediContext = null;
 			ediRules = null;
 			FileUtils.CurFileName = path;
@@ -1389,6 +1395,17 @@ namespace ScintillaNET.Demo {
 		{
 			string txt = textBoxSearchFile.Text.Trim();
 			if (string.IsNullOrEmpty(txt)) return;
+			bool useRegex = checkBoxRegex.Checked;
+			if (useRegex)
+			{
+				try { new Regex(txt); }
+				catch (ArgumentException ex)
+				{
+					ShowError("Invalid regular expression:", ex);
+					return;
+				}
+			}
+			regexSearchResults = false;
 
 			// Show busy state
 			buttonSearchFile.Enabled = false;
@@ -1406,8 +1423,15 @@ namespace ScintillaNET.Demo {
 			bgw.DoWork += delegate(object s, DoWorkEventArgs args)
 			{
 				Dictionary<long, string> loc;
-				EDIHelper helper = new EDIHelper();
-				if (!string.IsNullOrEmpty(curFile) && File.Exists(curFile) && helper.IsEDIFile(curFile))
+				if (useRegex)
+				{
+					loc = !string.IsNullOrEmpty(curFile) && File.Exists(curFile)
+						? FileUtils.SearchRegex(curFile, txt) : FileUtils.SearchRegexDisplayedText(displayedText, txt);
+				}
+				else
+				{
+					EDIHelper helper = new EDIHelper();
+					if (!string.IsNullOrEmpty(curFile) && File.Exists(curFile) && helper.IsEDIFile(curFile))
 					{
 						loc = helper.SearchEDIFile(curFile, txt);
 					}
@@ -1419,6 +1443,7 @@ namespace ScintillaNET.Demo {
 					{
 						loc = FileUtils.SearchDisplayedText(displayedText, txt);
 					}
+				}
 				args.Result = loc;
 			};
 			bgw.RunWorkerCompleted += delegate(object s, RunWorkerCompletedEventArgs args)
@@ -1435,6 +1460,8 @@ namespace ScintillaNET.Demo {
 				}
 
 				Dictionary<long, string> loc = (Dictionary<long, string>)args.Result;
+				regexSearchResults = useRegex;
+				regexSearchPattern = txt;
 				DisplaySearchResults(loc);
 			};
 			bgw.RunWorkerAsync();
@@ -1444,6 +1471,16 @@ namespace ScintillaNET.Demo {
 		{
 			string txt = textBoxSearchFile.Text.Trim();
 			if (string.IsNullOrEmpty(txt)) return;
+			bool useRegex = checkBoxRegex.Checked;
+			if (useRegex)
+			{
+				try { new Regex(txt); }
+				catch (ArgumentException ex)
+				{
+					ShowError("Invalid regular expression:", ex);
+					return;
+				}
+			}
 
 			buttonCountFile.Enabled = false;
 			buttonCountFile.Text = "Counting...";
@@ -1453,11 +1490,15 @@ namespace ScintillaNET.Demo {
 			richTextBoxBottom.AppendText("Counting...");
 
 			string curFile = FileUtils.CurFileName;
+			string displayedText = TextArea.Text;
 
 			BackgroundWorker bgw = new BackgroundWorker();
 			bgw.DoWork += delegate(object s, DoWorkEventArgs args)
 			{
-				long count = FileUtils.CountInFile(curFile, txt);
+				long count = useRegex
+					? (!string.IsNullOrEmpty(curFile) && File.Exists(curFile)
+						? FileUtils.CountRegexInFile(curFile, txt) : FileUtils.CountRegexDisplayedText(displayedText, txt))
+					: FileUtils.CountInFile(curFile, txt);
 				args.Result = count;
 			};
 			bgw.RunWorkerCompleted += delegate(object s, RunWorkerCompletedEventArgs args)
@@ -1595,6 +1636,11 @@ namespace ScintillaNET.Demo {
 					// Check if result has a byte offset (paged file) or is in-page
 					string numStr = str.Trim().Split(' ')[0];
 					long loc = long.Parse(numStr);
+					if (regexSearchResults)
+					{
+						SelectRegexResult(loc);
+						return;
+					}
 					int limit = getLimit();
 
 					if (limit > 0 && loc >= limit)
@@ -1658,6 +1704,29 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
+
+		private void SelectRegexResult(long offset)
+		{
+			bool hasFile = !string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName);
+			if (hasFile)
+			{
+				int limit = getLimit();
+				if (limit <= 0) return;
+				buttonJumpToAnyPage((int)(offset / limit));
+			}
+			Regex regex = new Regex(regexSearchPattern, RegexOptions.IgnoreCase);
+			foreach (Match match in regex.Matches(TextArea.Text))
+			{
+				long matchOffset = hasFile
+					? displayedPageStartOffset + Encoding.UTF8.GetByteCount(TextArea.Text.Substring(0, match.Index))
+					: match.Index;
+				if (matchOffset != offset || match.Length == 0) continue;
+				int line = TextArea.LineFromPosition(match.Index);
+				TextArea.FirstVisibleLine = Math.Max(0, line - TextArea.LinesOnScreen / 2);
+				TextArea.SetSelection(match.Index, match.Index + match.Length);
+				return;
+			}
+		}
 
 		private void HighlightWord(string text)
 		{
@@ -1730,13 +1799,17 @@ namespace ScintillaNET.Demo {
 			if (FileUtils.fileHasLineBreaks)
 				DisplayPaddedPage(page, limit);
 			else
+			{
+				displayedPageStartOffset = (long)page * limit;
 				TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, page);
+			}
 		}
 
 		private void DisplayPaddedPage(int page, int limit)
 		{
 			long startOffset;
 			TextArea.Text = FileUtils.ReadPaddedPage(FileUtils.CurFileName, limit, page, out startOffset);
+			displayedPageStartOffset = startOffset;
 			ApplyLineNumbers(startOffset);
 		}
 

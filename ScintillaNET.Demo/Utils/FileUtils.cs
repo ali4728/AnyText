@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
+using System.Text.RegularExpressions;
 
 namespace ScintillaNET.Demo.Utils
 {
@@ -811,6 +812,123 @@ namespace ScintillaNET.Demo.Utils
                 }
                 LastTempEdiDir = "";
             }
+        }
+
+        public static Dictionary<long, string> SearchRegex(string path, string pattern)
+        {
+            long count;
+            return ScanRegex(path, pattern, false, out count);
+        }
+
+        public static long CountRegexInFile(string path, string pattern)
+        {
+            long count;
+            ScanRegex(path, pattern, true, out count);
+            return count;
+        }
+
+        public static long CountRegexDisplayedText(string displayedText, string pattern)
+        {
+            Regex regex = new Regex(pattern, RegexOptions.IgnoreCase);
+            long count = 0;
+            foreach (Match match in regex.Matches(displayedText))
+                if (match.Length > 0) count++;
+            return count;
+        }
+
+        private static Dictionary<long, string> ScanRegex(string path, string pattern, bool countOnly, out long total)
+        {
+            Dictionary<long, string> results = new Dictionary<long, string>();
+            total = 0;
+            Regex regex = new Regex(pattern, RegexOptions.IgnoreCase);
+            const int chunkSize = 65536;
+            const int overlap = 8192;
+            using (FileStream file = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                bool hasBom = file.Length >= 3 && file.ReadByte() == 0xEF && file.ReadByte() == 0xBB && file.ReadByte() == 0xBF;
+                file.Seek(0, SeekOrigin.Begin);
+                using (StreamReader reader = new StreamReader(file, new UTF8Encoding(false), true))
+                {
+                char[] buffer = new char[chunkSize];
+                string pending = "";
+                long byteOffset = hasBom ? 3 : 0;
+                int lineNumber = 1;
+                int count;
+                while ((count = reader.Read(buffer, 0, buffer.Length)) > 0 && (countOnly || results.Count < 10000))
+                {
+                    string text = pending + new string(buffer, 0, count);
+                    int coreLength = Math.Max(0, text.Length - overlap);
+                    if (reader.EndOfStream)
+                        coreLength = text.Length;
+                    else if (coreLength > 0 && char.IsHighSurrogate(text[coreLength - 1]))
+                        coreLength--;
+
+                    Match match = regex.Match(text);
+                    int scanned = 0;
+                    int matchLine = lineNumber;
+                    while (match.Success && match.Index < coreLength && (countOnly || results.Count < 10000))
+                    {
+                        for (int i = scanned; i < match.Index; i++)
+                            if (text[i] == '\n') matchLine++;
+                        scanned = match.Index;
+                        if (match.Length > 0 && match.Index + match.Length > coreLength && coreLength < text.Length)
+                        {
+                            coreLength = match.Index;
+                            break;
+                        }
+                        if (match.Length > 0)
+                        {
+                            total++;
+                            if (!countOnly)
+                            {
+                                int lineStart = text.LastIndexOf('\n', match.Index) + 1;
+                                int lineEnd = text.IndexOf('\n', match.Index);
+                                if (lineEnd < 0) lineEnd = text.Length;
+                                string sample = text.Substring(lineStart, Math.Min(200, lineEnd - lineStart)).Trim();
+                                long matchOffset = byteOffset + Encoding.UTF8.GetByteCount(text.Substring(0, match.Index));
+                                if (!results.ContainsKey(matchOffset))
+                                    results.Add(matchOffset, " Line:" + matchLine + "  " + sample);
+                            }
+                        }
+                        match = match.NextMatch();
+                    }
+
+                    string consumed = text.Substring(0, coreLength);
+                    byteOffset += Encoding.UTF8.GetByteCount(consumed);
+                    foreach (char c in consumed)
+                        if (c == '\n') lineNumber++;
+                    pending = text.Substring(coreLength);
+                    if (pending.Length > 1048576)
+                        throw new InvalidOperationException("Regex match exceeds the 1 MB search window. Use a more specific pattern.");
+                }
+                }
+            }
+            return results;
+        }
+
+        public static Dictionary<long, string> SearchRegexDisplayedText(string displayedText, string pattern)
+        {
+            Dictionary<long, string> results = new Dictionary<long, string>();
+            Regex regex = new Regex(pattern, RegexOptions.IgnoreCase);
+            int lineNumber = 1;
+            int lineStart = 0;
+            foreach (Match match in regex.Matches(displayedText))
+            {
+                if (match.Length == 0) continue;
+                while (lineStart < match.Index)
+                {
+                    int next = displayedText.IndexOf('\n', lineStart);
+                    if (next < 0 || next >= match.Index) break;
+                    lineStart = next + 1;
+                    lineNumber++;
+                }
+                int lineEnd = displayedText.IndexOf('\n', match.Index);
+                if (lineEnd < 0) lineEnd = displayedText.Length;
+                string sample = displayedText.Substring(lineStart, Math.Min(200, lineEnd - lineStart)).Trim();
+                results.Add(match.Index, " Line:" + lineNumber + "  " + sample);
+                if (results.Count >= 10000) break;
+            }
+            return results;
         }
 
         public static Dictionary<long, string> SearchFile(string path, string searchString)
