@@ -18,7 +18,7 @@
   <Transaction id="834" name="834 Enrollment">
     <Boundary segment="INS" />
     <Highlight segment="HD" />
-    <Highlight segment="REF" qualifier="0F" qualPosition="1" elementsToHighlight="2" />
+    <Highlight segment="REF" qualifier="0F" qualPosition="1" elementsToHighlight="2" color="#FCE08F" />
   </Transaction>
   <Transaction id="277" version="X214" name="277CA">    
     <Boundary segment="HL" element="3" value="PT"/>
