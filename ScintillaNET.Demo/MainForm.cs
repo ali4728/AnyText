@@ -22,6 +22,9 @@ namespace ScintillaNET.Demo {
 		private bool regexSearchResults;
 		private string regexSearchPattern;
 		private long displayedPageStartOffset;
+		private string byteNavigationSource;
+		private string ediUnwrapSource;
+		private string xmlFormatSource;
 
 		private void MainForm_Load(object sender, EventArgs e) {
 
@@ -555,6 +558,9 @@ namespace ScintillaNET.Demo {
 			richTextBoxBottom.Text = "";
 			regexSearchResults = false;
 			displayedPageStartOffset = 0;
+			byteNavigationSource = path;
+			ediUnwrapSource = null;
+			xmlFormatSource = null;
 			ediContext = null;
 			ediRules = null;
 			FileUtils.CurFileName = path;
@@ -661,6 +667,7 @@ namespace ScintillaNET.Demo {
 								try
 								{
 									string tempFile = FileUtils.UnwrapEdiToTempFile(path, ediContext.SegmentDelimiter);
+									ediUnwrapSource = path;
 									FileUtils.OriginalFileName = path;
 									FileUtils.CurFileName = tempFile;
 									FileInfo tempFi = new FileInfo(tempFile);
@@ -685,6 +692,7 @@ namespace ScintillaNET.Demo {
 								try
 								{
 									string tempFile = FileUtils.UnwrapXmlToTempFile(path);
+									xmlFormatSource = path;
 									FileUtils.OriginalFileName = path;
 									FileUtils.CurFileName = tempFile;
 									FileInfo tempFi = new FileInfo(tempFile);
@@ -1045,6 +1053,7 @@ namespace ScintillaNET.Demo {
 			try
 			{
 				string tempFile = FileUtils.UnwrapXmlToTempFile(curFile);
+				xmlFormatSource = curFile;
 				if (string.IsNullOrEmpty(FileUtils.OriginalFileName))
 					FileUtils.OriginalFileName = curFile;
 				FileUtils.CurFileName = tempFile;
@@ -1329,6 +1338,127 @@ namespace ScintillaNET.Demo {
 			catch (Exception ex)
 			{
 				ShowError("Error jumping to page:", ex);
+			}
+		}
+
+		private void textBoxByteOffset_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.KeyCode == Keys.Enter)
+			{
+				e.SuppressKeyPress = true;
+				GoToByte();
+			}
+		}
+
+		private void buttonGoToByte_Click(object sender, EventArgs e)
+		{
+			GoToByte();
+		}
+
+		private void GoToByte()
+		{
+			try
+			{
+				long offset;
+				int limit = getLimit();
+				string source = byteNavigationSource;
+				if (string.IsNullOrEmpty(source) || !File.Exists(source) ||
+					string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName))
+				{
+					ShowError("Open a file before navigating to a byte.");
+					return;
+				}
+				long fileLength = new FileInfo(source).Length;
+				if (limit <= 0)
+				{
+					ShowError("Enter a positive page size on the Main tab.");
+					return;
+				}
+				if (fileLength == 0)
+				{
+					ShowError("The file is empty; there are no bytes to navigate to.");
+					return;
+				}
+				if (!long.TryParse(textBoxByteOffset.Text.Trim(), out offset) || offset < 0 || offset >= fileLength)
+				{
+					ShowError(String.Format("Enter a byte offset from 0 to {0:n0}.", fileLength - 1));
+					textBoxByteOffset.Focus();
+					textBoxByteOffset.SelectAll();
+					return;
+				}
+
+				bool unwrappedEdi = ediContext != null &&
+					string.Equals(source, ediUnwrapSource, StringComparison.OrdinalIgnoreCase) &&
+					!string.Equals(source, FileUtils.CurFileName, StringComparison.OrdinalIgnoreCase);
+				if (string.Equals(source, xmlFormatSource, StringComparison.OrdinalIgnoreCase) &&
+					!string.Equals(source, FileUtils.CurFileName, StringComparison.OrdinalIgnoreCase))
+				{
+					FileUtils.CurFileName = source;
+					FileUtils.fileSize = fileLength;
+					FileUtils.LineOffsetIndex = null;
+					FileUtils.fileHasLineBreaks = false;
+					FileUtils.readNBites(source, limit, 0);
+					labelTotalBytes.Text = String.Format("Bytes: {0:n0}", fileLength);
+					labelTotals.Text = (fileLength / limit).ToString();
+					ResetLineNumbers();
+				}
+				if (!unwrappedEdi && !string.Equals(source, FileUtils.CurFileName, StringComparison.OrdinalIgnoreCase))
+				{
+					ShowError("Source byte offsets cannot be mapped to the formatted file.");
+					return;
+				}
+				long displayOffset = unwrappedEdi
+					? FileUtils.MapEdiByteOffset(source, offset, ediContext.SegmentDelimiter) : offset;
+				using (FileStream file = new FileStream(FileUtils.CurFileName, FileMode.Open, FileAccess.Read))
+				{
+					if (!unwrappedEdi && displayOffset < 3 && file.Length >= 3 &&
+						file.ReadByte() == 0xEF && file.ReadByte() == 0xBB && file.ReadByte() == 0xBF)
+						displayOffset = 3;
+					if (displayOffset >= file.Length)
+					{
+						ShowError("The byte does not correspond to displayed content.");
+						return;
+					}
+					file.Seek(displayOffset, SeekOrigin.Begin);
+					while (displayOffset > 0 && (file.ReadByte() & 0xC0) == 0x80)
+					{
+						displayOffset--;
+						file.Seek(displayOffset, SeekOrigin.Begin);
+					}
+				}
+
+				int page = (int)(displayOffset / limit);
+				DisplayPage(page, limit);
+				textBoxPage.Text = page.ToString();
+				ApplyEdiRecordBoundaries();
+
+				long bytePosition = displayOffset - displayedPageStartOffset;
+				if (displayedPageStartOffset == 0)
+				{
+					using (FileStream file = new FileStream(FileUtils.CurFileName, FileMode.Open, FileAccess.Read))
+						if (file.Length >= 3 && file.ReadByte() == 0xEF && file.ReadByte() == 0xBB && file.ReadByte() == 0xBF)
+							bytePosition -= 3;
+				}
+				if (bytePosition < 0 || bytePosition >= TextArea.TextLength)
+				{
+					ShowError("The byte is outside the displayed page.");
+					return;
+				}
+
+				int start = (int)bytePosition;
+				int character = Encoding.UTF8.GetCharCount(Encoding.UTF8.GetBytes(TextArea.Text), 0, start);
+				int line = TextArea.LineFromPosition(start);
+				int lineEnd = TextArea.Lines[line].Position + TextArea.Lines[line].Length;
+				int length = Math.Min(5, TextArea.Text.Length - character);
+				int end = Math.Min(TextArea.TextLength, start + Encoding.UTF8.GetByteCount(TextArea.Text.Substring(character, length)));
+				end = Math.Min(end, lineEnd);
+				TextArea.FirstVisibleLine = Math.Max(0, line - TextArea.LinesOnScreen / 2);
+				TextArea.SetSelection(start, end);
+				TextArea.Focus();
+			}
+			catch (Exception ex)
+			{
+				ShowError("Error navigating to byte:", ex);
 			}
 		}
 

@@ -24,6 +24,7 @@ The application is **NOT a full editor**. It is optimized for:
   - First page (top of file)
   - Next / Previous page
   - Jump to offsetbyte[] ReadChunk(string filePath, long offset, int size);
+
 ---
 
 ### Paging Mechanism
@@ -34,6 +35,7 @@ The application is **NOT a full editor**. It is optimized for:
 - Navigation:
   - Next page → offset += pageSize
   - Previous page → offset -= pageSize
+- Go to Byte must only read the original EDI/XML file; never alter, write, or overwrite the source file while navigating. Formatting/unwrapping must operate on a separate temporary copy.
 
 ---
 
@@ -89,6 +91,7 @@ ST*...
   - Large text handling
 - Custom line numbers on margin 0 (`MarginType.RightText`), dynamically sized based on digit countscintilla.ReadOnly = true;
 scintilla.Text = processedChunk;
+
 ---
 
 ### Search Functionality

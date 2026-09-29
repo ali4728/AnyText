@@ -101,6 +101,9 @@
             this.mainTab = new System.Windows.Forms.TabPage();
             this.optionsTab = new System.Windows.Forms.TabPage();
             this.utilsTab = new System.Windows.Forms.TabPage();
+            this.labelByteOffset = new System.Windows.Forms.Label();
+            this.textBoxByteOffset = new System.Windows.Forms.TextBox();
+            this.buttonGoToByte = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             this.PanelSearch.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -109,6 +112,7 @@
             this.splitContainer1.SuspendLayout();
             this.mainTabs.SuspendLayout();
             this.mainTab.SuspendLayout();
+            this.optionsTab.SuspendLayout();
             this.SuspendLayout();
             // 
             // TextPanel
@@ -805,12 +809,42 @@
             // 
             // optionsTab
             // 
+            this.optionsTab.Controls.Add(this.labelByteOffset);
+            this.optionsTab.Controls.Add(this.textBoxByteOffset);
+            this.optionsTab.Controls.Add(this.buttonGoToByte);
             this.optionsTab.Location = new System.Drawing.Point(4, 26);
             this.optionsTab.Name = "optionsTab";
             this.optionsTab.Size = new System.Drawing.Size(956, 66);
             this.optionsTab.TabIndex = 1;
             this.optionsTab.Text = "Options";
             this.optionsTab.UseVisualStyleBackColor = true;
+            // 
+            // labelByteOffset
+            // 
+            this.labelByteOffset.AutoSize = true;
+            this.labelByteOffset.Location = new System.Drawing.Point(11, 16);
+            this.labelByteOffset.Name = "labelByteOffset";
+            this.labelByteOffset.Size = new System.Drawing.Size(84, 15);
+            this.labelByteOffset.TabIndex = 0;
+            this.labelByteOffset.Text = "Byte (0-based):";
+            // 
+            // textBoxByteOffset
+            // 
+            this.textBoxByteOffset.Location = new System.Drawing.Point(132, 12);
+            this.textBoxByteOffset.Name = "textBoxByteOffset";
+            this.textBoxByteOffset.Size = new System.Drawing.Size(134, 23);
+            this.textBoxByteOffset.TabIndex = 1;
+            this.textBoxByteOffset.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBoxByteOffset_KeyDown);
+            // 
+            // buttonGoToByte
+            // 
+            this.buttonGoToByte.Location = new System.Drawing.Point(274, 12);
+            this.buttonGoToByte.Name = "buttonGoToByte";
+            this.buttonGoToByte.Size = new System.Drawing.Size(72, 23);
+            this.buttonGoToByte.TabIndex = 2;
+            this.buttonGoToByte.Text = "Go to Byte";
+            this.buttonGoToByte.UseVisualStyleBackColor = true;
+            this.buttonGoToByte.Click += new System.EventHandler(this.buttonGoToByte_Click);
             // 
             // utilsTab
             // 
@@ -849,6 +883,8 @@
             this.mainTabs.ResumeLayout(false);
             this.mainTab.ResumeLayout(false);
             this.mainTab.PerformLayout();
+            this.optionsTab.ResumeLayout(false);
+            this.optionsTab.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -934,6 +970,9 @@
         private System.Windows.Forms.TabPage mainTab;
         private System.Windows.Forms.TabPage optionsTab;
         private System.Windows.Forms.TabPage utilsTab;
+        private System.Windows.Forms.Label labelByteOffset;
+        private System.Windows.Forms.TextBox textBoxByteOffset;
+        private System.Windows.Forms.Button buttonGoToByte;
     }
 }
 

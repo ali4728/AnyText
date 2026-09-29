@@ -279,6 +279,43 @@ namespace ScintillaNET.Demo.Utils
             }
         }
 
+        public static long MapEdiByteOffset(string sourcePath, long sourceOffset, char segmentDelimiter)
+        {
+            long displayedOffset = 0;
+            long characterOffset = 0;
+            using (FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read))
+            {
+                bool hasBom = source.Length >= 3 && source.ReadByte() == 0xEF &&
+                    source.ReadByte() == 0xBB && source.ReadByte() == 0xBF;
+                if (hasBom && sourceOffset < 3)
+                    return 0;
+                source.Position = hasBom ? 3 : 0;
+                byte[] buffer = new byte[65536];
+                long position = source.Position;
+                int read;
+                while (position < source.Length &&
+                    (read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, Math.Max(1, sourceOffset - position + 1)))) > 0)
+                {
+                    for (int i = 0; i < read; i++, position++)
+                    {
+                        byte b = buffer[i];
+                        if (position == sourceOffset && b != '\r' && b != '\n')
+                            return (b & 0xC0) == 0x80 ? characterOffset : displayedOffset;
+                        if (b == '\r' || b == '\n')
+                            continue;
+                        if ((b & 0xC0) != 0x80)
+                            characterOffset = displayedOffset;
+                        displayedOffset++;
+                        if (b == (byte)segmentDelimiter)
+                            displayedOffset += Environment.NewLine.Length;
+                        if (position >= sourceOffset)
+                            return displayedOffset;
+                    }
+                }
+                return displayedOffset;
+            }
+        }
+
         public static string getFixWidth(string str, int width)
         {
             char[] ary = str.ToCharArray();
