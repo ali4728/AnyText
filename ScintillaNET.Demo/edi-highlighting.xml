@@ -1,36 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <EdiHighlighting defaultBoundaryColor="#C8E1FF" defaultHighlightColor="#FF0000">
   <Transaction id="837" version="X223" name="837 Institutional">
-    <Boundary segment="HL" element="3" value="22" />
+    <Highlight segment="HL" qualifier="22" qualPosition="3" elementsToHighlight="row" />
     <Highlight segment="CLM" />
     <Highlight segment="LX" />
   </Transaction>
   <Transaction id="837" version="X222" name="837 Professional">
-    <Boundary segment="HL" element="3" value="22" />
+    <Highlight segment="HL" qualifier="22" qualPosition="3" elementsToHighlight="row" />
     <Highlight segment="CLM" />
     <Highlight segment="LX" />
   </Transaction>
   <Transaction id="837" name="837">
-    <Boundary segment="HL" element="3" value="22" />
+    <Highlight segment="HL" qualifier="22" qualPosition="3" elementsToHighlight="row" />
     <Highlight segment="CLM" />
     <Highlight segment="LX" />
   </Transaction>
   <Transaction id="834" name="834 Enrollment">
-    <Boundary segment="INS" />
+    <Highlight segment="INS" elementsToHighlight="row" />
     <Highlight segment="HD" />
     <Highlight segment="REF" qualifier="0F" qualPosition="1" elementsToHighlight="2" color="#FCE08F" />
   </Transaction>
   <Transaction id="277" version="X214" name="277CA">    
-    <Boundary segment="HL" element="3" value="PT"/>
+    <Highlight segment="HL" qualifier="PT" qualPosition="3" elementsToHighlight="row" />
     <Highlight segment="HL" element="3" value="19" highlightValue="true" />
     <Highlight segment="STC" element="3" value="WQ" highlightValue="true" color="#90EE90" />
   </Transaction>
   <Transaction id="835" name="835 Remittance">
-    <Boundary segment="CLP" highlightSegment="true" />
+    <Highlight segment="CLP" elementsToHighlight="row" />
+    <Highlight segment="CLP" />
     <Highlight segment="SVC" />
   </Transaction>
   <Transaction id="999" name="999 Acknowledgment">
-    <Boundary segment="AK2" />
+    <Highlight segment="AK2" elementsToHighlight="row" />
     <Highlight segment="IK3" />
     <Highlight segment="IK4" />
     <Highlight segment="IK5" />

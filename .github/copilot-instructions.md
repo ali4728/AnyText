@@ -144,6 +144,7 @@ scintilla.Text = processedChunk;
 - Prefer loading editable EDI highlighting rules from `edi-highlighting.xml` beside the executable in `bin` at startup, rather than copying/loading a per-user AppData configuration. Keep the project XML copied to the output directory and restart to apply changes.
 - For EDI segment/value highlighting, preserve the original text foreground color (black in the shown examples); configurable highlight colors should color only the rounded-box indicator, not recolor the text.
 - For EDI highlighting elementsToHighlight positions, use zero to denote the segment ID itself (e.g. REF/HD/CLM); positions 1, 2, 3 refer to one-based X12 element numbers (REF01, REF02, REF03).
+- EDI Boundary highlighting should color only matching starting-segment lines based on segment/element/value, without shading intervening record lines; existing Highlight segment indicators should remain unchanged.
 
 ---
 

@@ -25,8 +25,19 @@ namespace ScintillaNET.Demo {
 		private string byteNavigationSource;
 		private string ediUnwrapSource;
 		private string xmlFormatSource;
+		private ToolStripMenuItem toggleHeaderMenuItem;
+		private ToolStripMenuItem toggleResultsMenuItem;
+		private int resultsSplitterDistance;
 
 		private void MainForm_Load(object sender, EventArgs e) {
+			toggleHeaderMenuItem = new ToolStripMenuItem("Hide Header", null, ToggleHeaderButton_Click);
+			toggleResultsMenuItem = new ToolStripMenuItem("Hide Results", null, ToggleResultsButton_Click);
+			viewToolStripMenuItem.DropDownItems.Insert(0, toggleHeaderMenuItem);
+			viewToolStripMenuItem.DropDownItems.Insert(1, toggleResultsMenuItem);
+			viewToolStripMenuItem.DropDownItems.Insert(2, new ToolStripSeparator());
+			ToolStripMenuItem copyOriginalFileNameMenuItem = new ToolStripMenuItem("Copy Original File Name", null, CopyOriginalFileName_Click);
+			int pathItemIndex = viewToolStripMenuItem.DropDownItems.IndexOf(copyOriginalPathToolStripMenuItem);
+			viewToolStripMenuItem.DropDownItems.Insert(pathItemIndex + 1, copyOriginalFileNameMenuItem);
 
 			// CREATE CONTROL
 			TextArea = new ScintillaNET.Scintilla();
@@ -71,6 +82,41 @@ namespace ScintillaNET.Demo {
 			if (!string.IsNullOrEmpty(configWarning))
 				ShowError(configWarning);
 
+		}
+
+		private void ToggleHeaderButton_Click(object sender, EventArgs e)
+		{
+			int oldTop = splitContainer1.Top;
+			mainTabs.Visible = !mainTabs.Visible;
+			int newTop = mainTabs.Visible ? mainTabs.Bottom + 2 : menuStrip1.Bottom + 2;
+			splitContainer1.Top = newTop;
+			splitContainer1.Height += oldTop - newTop;
+			if (splitContainer1.Panel2Collapsed)
+				resultsSplitterDistance += oldTop - newTop;
+			else
+			{
+				int maximum = splitContainer1.Height - splitContainer1.Panel2MinSize - splitContainer1.SplitterWidth;
+				splitContainer1.SplitterDistance = Math.Max(splitContainer1.Panel1MinSize,
+					Math.Min(splitContainer1.SplitterDistance + oldTop - newTop, maximum));
+			}
+			toggleHeaderMenuItem.Text = mainTabs.Visible ? "Hide Header" : "Show Header";
+		}
+
+		private void ToggleResultsButton_Click(object sender, EventArgs e)
+		{
+			if (splitContainer1.Panel2Collapsed)
+			{
+				splitContainer1.Panel2Collapsed = false;
+				int maximum = splitContainer1.Height - splitContainer1.Panel2MinSize - splitContainer1.SplitterWidth;
+				splitContainer1.SplitterDistance = Math.Max(splitContainer1.Panel1MinSize, Math.Min(resultsSplitterDistance, maximum));
+				toggleResultsMenuItem.Text = "Hide Results";
+			}
+			else
+			{
+				resultsSplitterDistance = splitContainer1.SplitterDistance;
+				splitContainer1.Panel2Collapsed = true;
+				toggleResultsMenuItem.Text = "Show Results";
+			}
 		}
 
 		private void InitColors() {
@@ -269,10 +315,9 @@ namespace ScintillaNET.Demo {
 		private const int BOOKMARK_MARKER = 2;
 
 		/// <summary>
-		/// Marker for alternating EDI record background (odd records)
+		/// Marker for EDI row background
 			/// </summary>
 		private const int EDI_RECORD_MARKER = 20;
-		private const int EDI_BOUNDARY_MARKER = 21;
 		private const int EDI_LAST_MARKER = 31;
 		private const int EDI_LAST_INDICATOR = 31;
 			private bool ediRecordBoundariesEnabled = false;
@@ -335,22 +380,18 @@ namespace ScintillaNET.Demo {
 			// Colors are assigned for the selected transaction when a page is displayed.
 		}
 
-		private int GetEdiBoundaryMarker(Color color, Dictionary<Color, int> markers)
+		private int GetEdiRowMarker(Color color, Dictionary<Color, int> markers)
 		{
 			int marker;
 			if (markers.TryGetValue(color, out marker))
 				return marker;
-			marker = EDI_RECORD_MARKER + markers.Count * 2;
-			if (marker + 1 > EDI_LAST_MARKER)
-				throw new InvalidOperationException("Too many EDI boundary colors (maximum 6 per transaction).");
+			marker = EDI_RECORD_MARKER + markers.Count;
+			if (marker > EDI_LAST_MARKER)
+				throw new InvalidOperationException("Too many EDI row highlight colors (maximum 6 per transaction).");
 			markers.Add(color, marker);
-			var region = TextArea.Markers[marker];
-			region.Symbol = MarkerSymbol.Background;
-			region.SetBackColor(Color.FromArgb((color.R * 42 + 255 * 58) / 100,
-				(color.G * 42 + 255 * 58) / 100, (color.B * 42 + 255 * 58) / 100));
-			var boundary = TextArea.Markers[marker + 1];
-			boundary.Symbol = MarkerSymbol.Background;
-			boundary.SetBackColor(color);
+			var row = TextArea.Markers[marker];
+			row.Symbol = MarkerSymbol.Background;
+			row.SetBackColor(color);
 			return marker;
 		}
 
@@ -389,31 +430,23 @@ namespace ScintillaNET.Demo {
 				string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName))
 				return;
 
-			Dictionary<Color, int> boundaryMarkers = new Dictionary<Color, int>();
+			Dictionary<Color, int> rowMarkers = new Dictionary<Color, int>();
 			Dictionary<Color, int> highlightIndicators = new Dictionary<Color, int>();
 			int lineCount = TextArea.Lines.Count;
-			bool inOddRecord = false;
-			bool foundFirstBoundary = false;
-			int activeRegionMarker = EDI_RECORD_MARKER;
 
 			for (int i = 0; i < lineCount; i++)
 			{
 				string lineText = TextArea.Lines[i].Text;
 				string trimmed = lineText.TrimStart();
 				int position = TextArea.Lines[i].Position + lineText.Length - trimmed.Length;
-				bool isBoundary = false;
-				int boundaryMarker = EDI_BOUNDARY_MARKER;
+				int rowMarker = -1;
 				foreach (EdiHighlightRule rule in ediRules.Rules)
 				{
 					int valueStart, valueLength;
 					if (!rule.Matches(trimmed, ediContext.ElementDelimiter, ediContext.SegmentDelimiter, out valueStart, out valueLength))
 						continue;
-					if (rule.IsBoundary)
-					{
-						isBoundary = true;
-						activeRegionMarker = GetEdiBoundaryMarker(rule.BoundaryColor, boundaryMarkers);
-						boundaryMarker = activeRegionMarker + 1;
-					}
+					if (rule.HighlightRow)
+						rowMarker = GetEdiRowMarker(rule.BoundaryColor, rowMarkers);
 					if (rule.HighlightSegment)
 						HighlightEdiRange(position, rule.Segment.Length, rule.HighlightColor, highlightIndicators);
 					if (rule.HighlightValue && valueLength > 0)
@@ -429,18 +462,8 @@ namespace ScintillaNET.Demo {
 					}
 				}
 
-				if (isBoundary)
-				{
-					if (foundFirstBoundary)
-						inOddRecord = !inOddRecord;
-					foundFirstBoundary = true;
-
-					TextArea.Lines[i].MarkerAdd(boundaryMarker);
-				}
-				else if (inOddRecord)
-				{
-					TextArea.Lines[i].MarkerAdd(activeRegionMarker);
-				}
+				if (rowMarker >= 0)
+					TextArea.Lines[i].MarkerAdd(rowMarker);
 			}
 		}
 
@@ -1172,6 +1195,15 @@ namespace ScintillaNET.Demo {
 				Clipboard.SetText(originalPath);
 				Console.WriteLine("Copied original path: " + originalPath);
 			}
+		}
+
+		private void CopyOriginalFileName_Click(object sender, EventArgs e)
+		{
+			if (string.IsNullOrEmpty(FileUtils.CurFileName) || !File.Exists(FileUtils.CurFileName))
+				return;
+
+			string originalPath = string.IsNullOrEmpty(FileUtils.OriginalFileName) ? FileUtils.CurFileName : FileUtils.OriginalFileName;
+			Clipboard.SetText(Path.GetFileName(originalPath));
 		}
 
 		private void unWrapFixWidthToolStripMenuItem_Click(object sender, EventArgs e)

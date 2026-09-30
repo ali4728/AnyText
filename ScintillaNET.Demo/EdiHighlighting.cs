@@ -14,19 +14,19 @@ namespace ScintillaNET.Demo
         public string Segment { get; private set; }
         public int Element { get; private set; }
         public string Value { get; private set; }
-        public bool IsBoundary { get; private set; }
+        public bool HighlightRow { get; private set; }
         public bool HighlightSegment { get; private set; }
         public bool HighlightValue { get; private set; }
         public int[] ElementsToHighlight { get; private set; }
         public Color BoundaryColor { get; private set; }
         public Color HighlightColor { get; private set; }
 
-        public EdiHighlightRule(string segment, int element, string value, bool isBoundary, bool highlightSegment, bool highlightValue, int[] elementsToHighlight, Color boundaryColor, Color highlightColor)
+        public EdiHighlightRule(string segment, int element, string value, bool highlightRow, bool highlightSegment, bool highlightValue, int[] elementsToHighlight, Color boundaryColor, Color highlightColor)
         {
             Segment = segment;
             Element = element;
             Value = value;
-            IsBoundary = isBoundary;
+            HighlightRow = highlightRow;
             HighlightSegment = highlightSegment;
             HighlightValue = highlightValue;
             ElementsToHighlight = elementsToHighlight;
@@ -180,8 +180,7 @@ namespace ScintillaNET.Demo
                 HashSet<Color> highlightColors = new HashSet<Color>();
                 foreach (XElement element in transaction.Elements())
                 {
-                    bool boundary = element.Name == "Boundary";
-                    if (!boundary && element.Name != "Highlight")
+                    if (element.Name != "Highlight")
                         throw new FormatException("Unexpected rule element: " + element.Name);
                     string segment = (string)element.Attribute("segment");
                     if (string.IsNullOrEmpty(segment) || segment.Length < 2 || segment.Length > 3)
@@ -206,7 +205,8 @@ namespace ScintillaNET.Demo
                         throw new FormatException("A matched element requires both a positive element number and a value.");
                     string targetsText = (string)element.Attribute("elementsToHighlight");
                     int[] targets = null;
-                    if (targetsText != null)
+                    bool highlightRow = string.Equals(targetsText, "row", StringComparison.OrdinalIgnoreCase);
+                    if (targetsText != null && !highlightRow)
                     {
                         if (targetsText.Length == 0)
                             throw new FormatException("elementsToHighlight must list at least one position.");
@@ -219,19 +219,19 @@ namespace ScintillaNET.Demo
                                 throw new FormatException("elementsToHighlight must contain distinct positions from 0 to 99.");
                         }
                     }
-                    bool markSegment = ReadBool(element, "highlightSegment", !boundary && targets == null);
+                    bool markSegment = ReadBool(element, "highlightSegment", targetsText == null);
                     bool markValue = ReadBool(element, "highlightValue", false);
                     if (markValue && index == 0)
                         throw new FormatException("highlightValue requires an element match.");
-                    if (targets != null && (element.Attribute("highlightSegment") != null || element.Attribute("highlightValue") != null))
+                    if (targetsText != null && (element.Attribute("highlightSegment") != null || element.Attribute("highlightValue") != null))
                         throw new FormatException("elementsToHighlight cannot be combined with highlightSegment or highlightValue.");
-                    Color ruleBoundaryColor = boundary ? ReadColor(element, "color", transactionBoundaryColor) : transactionBoundaryColor;
-                    Color ruleHighlightColor = ReadColor(element, "color", transactionHighlightColor);
-                    if (boundary)
+                    Color ruleBoundaryColor = highlightRow ? ReadColor(element, "color", transactionBoundaryColor) : transactionBoundaryColor;
+                    Color ruleHighlightColor = highlightRow ? transactionHighlightColor : ReadColor(element, "color", transactionHighlightColor);
+                    if (highlightRow)
                         boundaryColors.Add(ruleBoundaryColor);
                     if (markSegment || markValue || targets != null)
                         highlightColors.Add(ruleHighlightColor);
-                    rules.Add(new EdiHighlightRule(segment, index, value, boundary, markSegment, markValue, targets, ruleBoundaryColor, ruleHighlightColor));
+                    rules.Add(new EdiHighlightRule(segment, index, value, highlightRow, markSegment, markValue, targets, ruleBoundaryColor, ruleHighlightColor));
                 }
                 if (boundaryColors.Count > 6 || highlightColors.Count > 11)
                     throw new FormatException("Transaction " + id + " exceeds the limit of 6 boundary or 11 highlight colors.");
