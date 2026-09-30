@@ -412,7 +412,7 @@
             // 
             this.ediRecordBoundariesToolStripMenuItem.Name = "ediRecordBoundariesToolStripMenuItem";
             this.ediRecordBoundariesToolStripMenuItem.Size = new System.Drawing.Size(221, 24);
-            this.ediRecordBoundariesToolStripMenuItem.Text = "EDI Record Boundaries";
+            this.ediRecordBoundariesToolStripMenuItem.Text = "Highlight EDI";
             this.ediRecordBoundariesToolStripMenuItem.Click += new System.EventHandler(this.ediRecordBoundariesToolStripMenuItem_Click);
             // 
             // toolStripSeparator6

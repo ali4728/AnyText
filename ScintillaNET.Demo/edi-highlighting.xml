@@ -2,6 +2,7 @@
 <EdiHighlighting defaultBoundaryColor="#C8E1FF" defaultHighlightColor="#FF0000">
   <Transaction id="837" version="X223" name="837 Institutional">
     <Highlight segment="HL" qualifier="22" qualPosition="3" elementsToHighlight="row" />
+    <Highlight segment="HL" qualifier="20" qualPosition="3" elementsToHighlight="row" color="#e1dfdd" />
     <Highlight segment="CLM" />
     <Highlight segment="LX" />
   </Transaction>
