@@ -41,4 +41,34 @@
   <Replace scope="Claim" segment="HI" element="2" component="2" with="Z000" />
   <Replace scope="Claim" segment="SV1" element="1" component="2" with="00000" />
   </Transaction>
+  <Transaction id="834" version="X220" name="834 Enrollment">
+  <Replace scope="Member" segment="REF" qualifierElement="1" qualifier="0F" element="2" with="SUB000001" />
+  <Replace scope="Member" segment="REF" qualifierElement="1" qualifier="1L" element="2" with="M000001" />
+  <Replace scope="MemberDetails" segment="NM1" qualifierElement="1" qualifier="IL" element="3" with="SUBSCRIBER" />
+  <Replace scope="MemberDetails" segment="NM1" qualifierElement="1" qualifier="IL" element="4" with="TEST" />
+  <Replace scope="MemberDetails" segment="NM1" qualifierElement="1" qualifier="IL" element="9" with="SUBSCRIBER0001" />
+  <Replace scope="MemberDetails" segment="PER" qualifierElement="3" qualifier="HP" element="4" with="0005550100" />
+  <Replace scope="MemberDetails" segment="PER" qualifierElement="5" qualifier="EM" element="6" with="test@example.com" />
+  <Replace scope="MemberDetails" segment="N3" element="1" with="123 TEST STREET" />
+  <Replace scope="MemberDetails" segment="N3" element="2" with="SUITE 100" />
+  <Replace scope="MemberDetails" segment="N4" element="1" with="TEST CITY" />
+  <Replace scope="MemberDetails" segment="N4" element="2" with="CA" />
+  <Replace scope="MemberDetails" segment="N4" element="3" with="90001" />
+  <Replace scope="MemberDetails" segment="DMG" qualifierElement="1" qualifier="D8" element="2" with="19700101" />
+  <Replace scope="Coverage" segment="DTP" qualifierElement="1" qualifier="348" element="3" with="20200101" />
+  </Transaction>
+  <Transaction id="835" version="X221" name="835 Remittance">
+  <Replace scope="ClaimPayment" segment="CLP" element="1" with="PATIENTACCOUNT0001" />
+  <Replace scope="ClaimPayment" segment="CLP" element="7" with="CLAIMCONTROL0001" />
+  <Replace scope="ClaimPayment" segment="NM1" qualifierElement="1" qualifier="QC" element="3" with="PATIENT" />
+  <Replace scope="ClaimPayment" segment="NM1" qualifierElement="1" qualifier="QC" element="4" with="TEST" />
+  <Replace scope="ClaimPayment" segment="NM1" qualifierElement="1" qualifier="QC" element="9" with="PATIENT0001" />
+  <Replace scope="ClaimPayment" segment="NM1" qualifierElement="1" qualifier="74" element="3" with="PATIENT" />
+  <Replace scope="ClaimPayment" segment="NM1" qualifierElement="1" qualifier="74" element="4" with="TEST" />
+  <Replace scope="ClaimPayment" segment="REF" qualifierElement="1" qualifier="EA" element="2" with="PATIENTACCOUNT0001" />
+  <Replace scope="ClaimPayment" segment="DTM" qualifierElement="1" qualifier="232" element="2" with="20200101" />
+  <Replace scope="ClaimPayment" segment="DTM" qualifierElement="1" qualifier="233" element="2" with="20200101" />
+  <Replace scope="ServicePayment" segment="SVC" element="1" component="2" with="00000" />
+  <Replace scope="ServicePayment" segment="DTM" qualifierElement="1" qualifier="472" element="2" with="20200101" />
+  </Transaction>
 </EdiDeidentification>

@@ -92,7 +92,9 @@ namespace ScintillaNET.Demo
                     rule.Qualifier = (string)node.Attribute("qualifier");
                     rule.Replacement = (string)node.Attribute("with");
                     if (string.IsNullOrEmpty(rule.Segment) || rule.Segment.Length < 2 || rule.Segment.Length > 3 ||
-                        (rule.Scope != "Person" && rule.Scope != "Claim") || rule.Replacement == null ||
+                        (rule.Scope != "Person" && rule.Scope != "Claim" && rule.Scope != "Member" &&
+                         rule.Scope != "MemberDetails" && rule.Scope != "Coverage" &&
+                         rule.Scope != "ClaimPayment" && rule.Scope != "ServicePayment") || rule.Replacement == null ||
                         !int.TryParse((string)node.Attribute("element"), NumberStyles.None, CultureInfo.InvariantCulture, out rule.Element) ||
                         rule.Element < 1 || rule.Element > 99 ||
                         !int.TryParse((string)node.Attribute("qualifierElement") ?? "0", NumberStyles.None, CultureInfo.InvariantCulture, out rule.QualifierElement) ||
@@ -122,8 +124,8 @@ namespace ScintillaNET.Demo
 
         private List<Rule> SelectRules(X12FileContext context)
         {
-            if (context == null || context.TransactionId != "837" || string.IsNullOrEmpty(context.ImplementationVersion))
-                throw new InvalidOperationException("Only 837I (X223) and 837P (X222) files are supported.");
+            if (!IsSupported(context))
+                throw new InvalidOperationException("Only 837I (X223), 837P (X222), 834 (X220), and 835 (X221) files are supported.");
             TransactionRules selected = null;
             foreach (TransactionRules candidate in transactions)
             {
@@ -139,12 +141,22 @@ namespace ScintillaNET.Demo
             return selected.Rules;
         }
 
+        internal static bool IsSupported(X12FileContext context)
+        {
+            return context != null && !string.IsNullOrEmpty(context.ImplementationVersion) &&
+                ((context.TransactionId == "837" &&
+                  (context.ImplementationVersion.IndexOf("X223", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   context.ImplementationVersion.IndexOf("X222", StringComparison.OrdinalIgnoreCase) >= 0)) ||
+                 (context.TransactionId == "834" &&
+                  context.ImplementationVersion.IndexOf("X220", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                 (context.TransactionId == "835" &&
+                  context.ImplementationVersion.IndexOf("X221", StringComparison.OrdinalIgnoreCase) >= 0));
+        }
+
         internal void Process(string sourcePath, string outputPath, X12FileContext context)
         {
-            if (context == null || context.TransactionId != "837" ||
-                (context.ImplementationVersion.IndexOf("X223", StringComparison.OrdinalIgnoreCase) < 0 &&
-                 context.ImplementationVersion.IndexOf("X222", StringComparison.OrdinalIgnoreCase) < 0))
-                throw new InvalidOperationException("Only 837I (X223) and 837P (X222) files are supported.");
+            if (!IsSupported(context))
+                throw new InvalidOperationException("Only 837I (X223), 837P (X222), 834 (X220), and 835 (X221) files are supported.");
             List<Rule> rules = SelectRules(context);
             if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(outputPath), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("The output must not overwrite the source.");
@@ -164,6 +176,11 @@ namespace ScintillaNET.Demo
                     {
                         bool personLoop = false;
                         bool personDetails = false;
+                        bool member = false;
+                        bool memberDetails = false;
+                        bool coverage = false;
+                        bool claimPayment = false;
+                        bool servicePayment = false;
                         int read;
                         while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
                         {
@@ -174,7 +191,8 @@ namespace ScintillaNET.Demo
                                 if (i > start) segment.Write(buffer, start, i - start);
                                 if (segment.Length > MaxSegmentBytes)
                                     throw new InvalidDataException("EDI segment exceeds 1 MB.");
-                                WriteSegment(segment, output, context, rules, ref personLoop, ref personDetails);
+                                WriteSegment(segment, output, context, rules, ref personLoop, ref personDetails,
+                                    ref member, ref memberDetails, ref coverage, ref claimPayment, ref servicePayment);
                                 output.WriteByte(buffer[i]);
                                 segment.SetLength(0);
                                 start = i + 1;
@@ -184,7 +202,8 @@ namespace ScintillaNET.Demo
                                 throw new InvalidDataException("EDI segment exceeds 1 MB.");
                         }
                         if (segment.Length > 0)
-                            WriteSegment(segment, output, context, rules, ref personLoop, ref personDetails);
+                            WriteSegment(segment, output, context, rules, ref personLoop, ref personDetails,
+                                ref member, ref memberDetails, ref coverage, ref claimPayment, ref servicePayment);
                     }
                 }
             }
@@ -195,7 +214,9 @@ namespace ScintillaNET.Demo
             }
         }
 
-        private void WriteSegment(MemoryStream segment, Stream output, X12FileContext context, List<Rule> rules, ref bool personLoop, ref bool personDetails)
+        private void WriteSegment(MemoryStream segment, Stream output, X12FileContext context, List<Rule> rules,
+            ref bool personLoop, ref bool personDetails, ref bool member, ref bool memberDetails, ref bool coverage,
+            ref bool claimPayment, ref bool servicePayment)
         {
             string text = ByteEncoding.GetString(segment.GetBuffer(), 0, (int)segment.Length);
             int first = 0;
@@ -208,25 +229,65 @@ namespace ScintillaNET.Demo
             }
             string id = text.Substring(first, idEnd - first);
             string[] fields = text.Substring(first, text.Length - first).Split(context.ElementDelimiter);
-            if (id == "HL")
+            if (context.TransactionId == "835" && id == "CLP")
+            {
+                claimPayment = true;
+                servicePayment = false;
+            }
+            else if (context.TransactionId == "835" && id == "SVC")
+            {
+                servicePayment = claimPayment || servicePayment;
+                claimPayment = false;
+            }
+            else if (context.TransactionId == "834" && id == "INS")
+            {
+                member = true;
+                memberDetails = false;
+                coverage = false;
+            }
+            else if (context.TransactionId == "834" && id == "HD")
+            {
+                memberDetails = false;
+                coverage = member;
+            }
+            else if (context.TransactionId == "837" && id == "HL")
             {
                 personLoop = fields.Length > 3 && (fields[3] == "22" || fields[3] == "23");
                 personDetails = false;
             }
             else if (id == "ST" || id == "SE" || id == "GS" || id == "GE" || id == "IEA")
             {
-                if (id == "ST" && (fields.Length < 2 || fields[1] != "837"))
+                if (id == "ST" && (fields.Length < 2 || fields[1] != context.TransactionId))
                     throw new InvalidDataException("Mixed or unsupported transactions cannot be de-identified.");
                 personLoop = false;
                 personDetails = false;
+                member = false;
+                memberDetails = false;
+                coverage = false;
+                claimPayment = false;
+                servicePayment = false;
             }
             else if (id == "NM1")
+            {
                 personDetails = personLoop && fields.Length > 1 && (fields[1] == "IL" || fields[1] == "QC");
+                if (context.TransactionId == "834")
+                {
+                    memberDetails = member && fields.Length > 1 && fields[1] == "IL";
+                    coverage = false;
+                }
+            }
 
             bool changed = false;
             foreach (Rule rule in rules)
             {
-                if (rule.Segment != id || !personLoop || (rule.Scope == "Person" && !personDetails) ||
+                if (rule.Segment != id ||
+                    ((rule.Scope == "Person" || rule.Scope == "Claim") &&
+                     (!personLoop || (rule.Scope == "Person" && !personDetails))) ||
+                    (rule.Scope == "Member" && !member) ||
+                    (rule.Scope == "MemberDetails" && !memberDetails) ||
+                    (rule.Scope == "Coverage" && !coverage) ||
+                    (rule.Scope == "ClaimPayment" && (!claimPayment || servicePayment)) ||
+                    (rule.Scope == "ServicePayment" && !servicePayment) ||
                     rule.Element >= fields.Length || string.IsNullOrEmpty(fields[rule.Element]) ||
                     (rule.QualifierElement > 0 && (rule.QualifierElement >= fields.Length || fields[rule.QualifierElement] != rule.Qualifier)))
                     continue;

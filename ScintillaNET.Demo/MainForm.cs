@@ -39,7 +39,7 @@ namespace ScintillaNET.Demo {
 			ToolStripMenuItem copyOriginalFileNameMenuItem = new ToolStripMenuItem("Copy Original File Name", null, CopyOriginalFileName_Click);
 			int pathItemIndex = viewToolStripMenuItem.DropDownItems.IndexOf(copyOriginalPathToolStripMenuItem);
 			viewToolStripMenuItem.DropDownItems.Insert(pathItemIndex + 1, copyOriginalFileNameMenuItem);
-			deidentifyEdiMenuItem = new ToolStripMenuItem("De-identify 837 and Save Copy...", null, DeidentifyEdi_Click);
+			deidentifyEdiMenuItem = new ToolStripMenuItem("De-identify EDI and Save Copy...", null, DeidentifyEdi_Click);
 			viewToolStripMenuItem.DropDownItems.Insert(viewToolStripMenuItem.DropDownItems.IndexOf(saveFileAsToolStripMenuItem) + 1, deidentifyEdiMenuItem);
 
 			// CREATE CONTROL
@@ -1212,12 +1212,9 @@ namespace ScintillaNET.Demo {
 		private void DeidentifyEdi_Click(object sender, EventArgs e)
 		{
 			string source = byteNavigationSource;
-			if (string.IsNullOrEmpty(source) || !File.Exists(source) || ediContext == null ||
-				ediContext.TransactionId != "837" ||
-				(ediContext.ImplementationVersion.IndexOf("X223", StringComparison.OrdinalIgnoreCase) < 0 &&
-				 ediContext.ImplementationVersion.IndexOf("X222", StringComparison.OrdinalIgnoreCase) < 0))
+			if (string.IsNullOrEmpty(source) || !File.Exists(source) || !EdiDeidentification.IsSupported(ediContext))
 			{
-				ShowError("Open an 837I (X223) or 837P (X222) EDI file before de-identifying.");
+				ShowError("Open an 837I (X223), 837P (X222), 834 (X220), or 835 (X221) EDI file before de-identifying.");
 				return;
 			}
 			string folder = !string.IsNullOrEmpty(FileUtils.LastTempZipDir) &&
@@ -1226,7 +1223,7 @@ namespace ScintillaNET.Demo {
 				? Path.GetDirectoryName(FileUtils.OriginalFileName) : Path.GetDirectoryName(source);
 			string baseName = Path.GetFileNameWithoutExtension(source);
 			string extension = Path.GetExtension(source);
-			string outputPath = Path.Combine(folder, baseName + "_Di-Identified_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + extension);
+			string outputPath = Path.Combine(folder, baseName + "_De-Identified_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + extension);
 			EdiDeidentification config;
 			try { config = EdiDeidentification.Load(); }
 			catch (Exception ex) { ShowError("Could not load EDI de-identification rules:", ex); return; }
