@@ -31,6 +31,8 @@ namespace ScintillaNET.Demo {
 		private int resultsSplitterDistance;
 
 		private void MainForm_Load(object sender, EventArgs e) {
+			fileToolStripMenuItem.DropDownItems.Insert(fileToolStripMenuItem.DropDownItems.IndexOf(openToolStripMenuItem) + 1,
+				new ToolStripMenuItem("Close", null, CloseFile_Click));
 			toggleHeaderMenuItem = new ToolStripMenuItem("Hide Header", null, ToggleHeaderButton_Click);
 			toggleResultsMenuItem = new ToolStripMenuItem("Hide Results", null, ToggleResultsButton_Click);
 			viewToolStripMenuItem.DropDownItems.Insert(0, toggleHeaderMenuItem);
@@ -768,6 +770,25 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
+		private void CloseFile_Click(object sender, EventArgs e)
+		{
+			TextArea.Text = "";
+			richTextBoxBottom.Clear();
+			regexSearchResults = false;
+			regexSearchPattern = null;
+			displayedPageStartOffset = 0;
+			byteNavigationSource = null;
+			ediUnwrapSource = null;
+			xmlFormatSource = null;
+			ediContext = null;
+			ediRules = null;
+			FileUtils.fileHasLineBreaks = false;
+			InitControls();
+			textBoxByteOffset.Text = "0";
+			Text = "AnyText";
+			CleanupTempFiles();
+		}
+
 		private void findToolStripMenuItem_Click(object sender, EventArgs e) {
 			OpenSearch();
 		}
@@ -1223,7 +1244,28 @@ namespace ScintillaNET.Demo {
 				? Path.GetDirectoryName(FileUtils.OriginalFileName) : Path.GetDirectoryName(source);
 			string baseName = Path.GetFileNameWithoutExtension(source);
 			string extension = Path.GetExtension(source);
-			string outputPath = Path.Combine(folder, baseName + "_De-Identified_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + extension);
+			string outputPath;
+			using (SaveFileDialog dialog = new SaveFileDialog())
+			{
+				dialog.Title = "Save De-identified EDI Copy As";
+				dialog.InitialDirectory = folder;
+				dialog.FileName = baseName + "_De-Identified_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + extension;
+				dialog.Filter = "All files|*.*";
+				dialog.OverwritePrompt = false;
+				while (true)
+				{
+					if (dialog.ShowDialog(this) != DialogResult.OK)
+						return;
+					if (string.Equals(Path.GetFullPath(source), Path.GetFullPath(dialog.FileName), StringComparison.OrdinalIgnoreCase) ||
+						File.Exists(dialog.FileName))
+					{
+						ShowError("Choose a new filename. The source and existing files cannot be overwritten.");
+						continue;
+					}
+					outputPath = dialog.FileName;
+					break;
+				}
+			}
 			EdiDeidentification config;
 			try { config = EdiDeidentification.Load(); }
 			catch (Exception ex) { ShowError("Could not load EDI de-identification rules:", ex); return; }
@@ -2055,10 +2097,15 @@ namespace ScintillaNET.Demo {
 		#endregion
 
 
-		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+		private void CleanupTempFiles()
 		{
 			FileUtils.CleanupTempZipDir();
 			FileUtils.CleanupTempEdiDir();
+		}
+
+		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+		{
+			CleanupTempFiles();
 		}
 
 	}
