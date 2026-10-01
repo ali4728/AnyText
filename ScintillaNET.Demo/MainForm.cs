@@ -1805,9 +1805,9 @@ namespace ScintillaNET.Demo {
 					}
 					int limit = getLimit();
 
-					if (limit > 0 && loc >= limit)
+					if (limit > 0 && !string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName))
 					{
-						// Paged result: byte offset is large, jump to the correct page
+						// File-backed results have absolute byte offsets, even on the first page.
 						int page = (int)(loc / limit);
 						Console.WriteLine(String.Format("Line double click offset:{0:n0} page:{1:n0} line:{2:n0}", loc, page, lnInt));
 
@@ -1819,8 +1819,7 @@ namespace ScintillaNET.Demo {
 						{
 							HighlightWord(searchText);
 
-							long pageStartByte = (long)page * limit;
-							int approxCharPos = (int)(loc - pageStartByte);
+							int approxCharPos = (int)(loc - displayedPageStartOffset);
 							int textLen = TextArea.TextLength;
 							if (approxCharPos >= textLen) approxCharPos = Math.Max(0, textLen - 1);
 
@@ -1841,7 +1840,7 @@ namespace ScintillaNET.Demo {
 					}
 					else
 					{
-						// In-page result: line number is within the visible text
+						// Results without a backing file use line numbers relative to the displayed text.
 						ScrollToLineNumber(lnInt);
 					}
 				}
