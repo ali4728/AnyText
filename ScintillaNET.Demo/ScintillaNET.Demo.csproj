@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EDIHelper.cs" />
+    <Compile Include="EdiDeidentification.cs" />
     <Compile Include="EdiHighlighting.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
@@ -63,6 +64,10 @@
     <Compile Include="Utils\HotKeyManager.cs" />
     <Compile Include="Utils\SearchManager.cs" />
     <EmbeddedResource Include="edi-highlighting.xml" />
+    <EmbeddedResource Include="edi-deidentification.xml" />
+    <Content Include="edi-deidentification.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="edi-highlighting.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

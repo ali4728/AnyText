@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EdiDeidentification>
+  <Transaction id="837" version="X223" name="837 Institutional">
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="IL" element="3" with="SUBSCRIBER" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="IL" element="4" with="TEST" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="IL" element="9" with="SUBSCRIBER0001" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="QC" element="3" with="PATIENT" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="QC" element="4" with="TEST" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="QC" element="9" with="PATIENT0001" />
+  <Replace scope="Person" segment="N3" element="1" with="123 TEST STREET" />
+  <Replace scope="Person" segment="N3" element="2" with="SUITE 100" />
+  <Replace scope="Person" segment="N4" element="1" with="TEST CITY" />
+  <Replace scope="Person" segment="N4" element="2" with="CA" />
+  <Replace scope="Person" segment="N4" element="3" with="90001" />
+  <Replace scope="Person" segment="DMG" qualifierElement="1" qualifier="D8" element="2" with="19700101" />
+  <Replace scope="Person" segment="DTP" qualifierElement="1" qualifier="291" element="3" with="19700101" />
+  <Replace scope="Claim" segment="DTP" qualifierElement="1" qualifier="472" element="3" with="20200101" />
+  <Replace scope="Claim" segment="DTP" qualifierElement="1" qualifier="434" element="3" with="20200101-20200101" />
+  <Replace scope="Claim" segment="HI" element="1" component="2" with="Z000" />
+  <Replace scope="Claim" segment="HI" element="2" component="2" with="Z000" />
+  <Replace scope="Claim" segment="SV2" element="1" with="0000" />
+  <Replace scope="Claim" segment="SV2" element="2" component="2" with="00000" />
+  </Transaction>
+  <Transaction id="837" version="X222" name="837 Professional">
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="IL" element="3" with="SUBSCRIBER" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="IL" element="4" with="TEST" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="IL" element="9" with="SUBSCRIBER0001" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="QC" element="3" with="PATIENT" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="QC" element="4" with="TEST" />
+  <Replace scope="Person" segment="NM1" qualifierElement="1" qualifier="QC" element="9" with="PATIENT0001" />
+  <Replace scope="Person" segment="N3" element="1" with="123 TEST STREET" />
+  <Replace scope="Person" segment="N3" element="2" with="SUITE 100" />
+  <Replace scope="Person" segment="N4" element="1" with="TEST CITY" />
+  <Replace scope="Person" segment="N4" element="2" with="CA" />
+  <Replace scope="Person" segment="N4" element="3" with="90001" />
+  <Replace scope="Person" segment="DMG" qualifierElement="1" qualifier="D8" element="2" with="19700101" />
+  <Replace scope="Person" segment="DTP" qualifierElement="1" qualifier="291" element="3" with="19700101" />
+  <Replace scope="Claim" segment="DTP" qualifierElement="1" qualifier="472" element="3" with="20200101" />
+  <Replace scope="Claim" segment="DTP" qualifierElement="1" qualifier="434" element="3" with="20200101-20200101" />
+  <Replace scope="Claim" segment="HI" element="1" component="2" with="Z000" />
+  <Replace scope="Claim" segment="HI" element="2" component="2" with="Z000" />
+  <Replace scope="Claim" segment="SV1" element="1" component="2" with="00000" />
+  </Transaction>
+</EdiDeidentification>

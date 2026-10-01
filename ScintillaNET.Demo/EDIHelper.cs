@@ -9,6 +9,7 @@ namespace ScintillaNET.Demo
     {
         public char ElementDelimiter { get; private set; }
         public char SegmentDelimiter { get; private set; }
+        public char ComponentDelimiter { get; internal set; }
         public string TransactionId { get; internal set; }
         public string ImplementationVersion { get; internal set; }
 
@@ -52,6 +53,7 @@ namespace ScintillaNET.Demo
                     return null;
 
                 X12FileContext context = new X12FileContext(isa[103], isa[105]);
+                context.ComponentDelimiter = isa[104];
                 char[] prefix = new char[65536];
                 int length = reader.ReadBlock(prefix, 0, prefix.Length);
                 string[] segments = new string(prefix, 0, length).Split(context.SegmentDelimiter);

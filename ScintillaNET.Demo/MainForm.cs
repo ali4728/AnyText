@@ -27,6 +27,7 @@ namespace ScintillaNET.Demo {
 		private string xmlFormatSource;
 		private ToolStripMenuItem toggleHeaderMenuItem;
 		private ToolStripMenuItem toggleResultsMenuItem;
+		private ToolStripMenuItem deidentifyEdiMenuItem;
 		private int resultsSplitterDistance;
 
 		private void MainForm_Load(object sender, EventArgs e) {
@@ -38,6 +39,8 @@ namespace ScintillaNET.Demo {
 			ToolStripMenuItem copyOriginalFileNameMenuItem = new ToolStripMenuItem("Copy Original File Name", null, CopyOriginalFileName_Click);
 			int pathItemIndex = viewToolStripMenuItem.DropDownItems.IndexOf(copyOriginalPathToolStripMenuItem);
 			viewToolStripMenuItem.DropDownItems.Insert(pathItemIndex + 1, copyOriginalFileNameMenuItem);
+			deidentifyEdiMenuItem = new ToolStripMenuItem("De-identify 837 and Save Copy...", null, DeidentifyEdi_Click);
+			viewToolStripMenuItem.DropDownItems.Insert(viewToolStripMenuItem.DropDownItems.IndexOf(saveFileAsToolStripMenuItem) + 1, deidentifyEdiMenuItem);
 
 			// CREATE CONTROL
 			TextArea = new ScintillaNET.Scintilla();
@@ -1204,6 +1207,53 @@ namespace ScintillaNET.Demo {
 
 			string originalPath = string.IsNullOrEmpty(FileUtils.OriginalFileName) ? FileUtils.CurFileName : FileUtils.OriginalFileName;
 			Clipboard.SetText(Path.GetFileName(originalPath));
+		}
+
+		private void DeidentifyEdi_Click(object sender, EventArgs e)
+		{
+			string source = byteNavigationSource;
+			if (string.IsNullOrEmpty(source) || !File.Exists(source) || ediContext == null ||
+				ediContext.TransactionId != "837" ||
+				(ediContext.ImplementationVersion.IndexOf("X223", StringComparison.OrdinalIgnoreCase) < 0 &&
+				 ediContext.ImplementationVersion.IndexOf("X222", StringComparison.OrdinalIgnoreCase) < 0))
+			{
+				ShowError("Open an 837I (X223) or 837P (X222) EDI file before de-identifying.");
+				return;
+			}
+			string folder = !string.IsNullOrEmpty(FileUtils.LastTempZipDir) &&
+				source.StartsWith(FileUtils.LastTempZipDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+				!string.IsNullOrEmpty(FileUtils.OriginalFileName)
+				? Path.GetDirectoryName(FileUtils.OriginalFileName) : Path.GetDirectoryName(source);
+			string baseName = Path.GetFileNameWithoutExtension(source);
+			string extension = Path.GetExtension(source);
+			string outputPath = Path.Combine(folder, baseName + "_Di-Identified_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + extension);
+			EdiDeidentification config;
+			try { config = EdiDeidentification.Load(); }
+			catch (Exception ex) { ShowError("Could not load EDI de-identification rules:", ex); return; }
+
+			deidentifyEdiMenuItem.Enabled = false;
+			Cursor = Cursors.WaitCursor;
+			BackgroundWorker worker = new BackgroundWorker();
+			worker.DoWork += delegate(object s, DoWorkEventArgs args)
+			{
+				X12FileContext context = new EDIHelper().ReadFileContext(source);
+				config.Process(source, outputPath, context);
+			};
+			worker.RunWorkerCompleted += delegate(object s, RunWorkerCompletedEventArgs args)
+			{
+				Cursor = Cursors.Default;
+				deidentifyEdiMenuItem.Enabled = true;
+				if (args.Error != null)
+					ShowError("EDI de-identification failed:", args.Error);
+				else
+				{
+					richTextBoxBottom.Text = "De-identified copy saved: " + outputPath + Environment.NewLine +
+						"Review this file for additional sensitive information before sharing.";
+					if (splitContainer1.Panel2Collapsed)
+						ToggleResultsButton_Click(null, EventArgs.Empty);
+				}
+			};
+			worker.RunWorkerAsync();
 		}
 
 		private void unWrapFixWidthToolStripMenuItem_Click(object sender, EventArgs e)
