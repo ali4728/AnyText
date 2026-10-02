@@ -29,8 +29,18 @@ namespace ScintillaNET.Demo {
 		private ToolStripMenuItem toggleResultsMenuItem;
 		private ToolStripMenuItem deidentifyEdiMenuItem;
 		private int resultsSplitterDistance;
+		private Panel tabBottomBorderCover;
 
 		private void MainForm_Load(object sender, EventArgs e) {
+			tabBottomBorderCover = new Panel();
+			tabBottomBorderCover.BackColor = BackColor;
+			tabBottomBorderCover.Height = 4;
+			Controls.Add(tabBottomBorderCover);
+			tabBottomBorderCover.BringToFront();
+			mainTabs.Resize += delegate { LayoutMainTabControls(); };
+			mainTabs.SelectedIndexChanged += delegate { LayoutMainTabControls(); };
+			labelTotalBytes.TextChanged += delegate { LayoutMainTabControls(); };
+			LayoutMainTabControls();
 			fileToolStripMenuItem.DropDownItems.Insert(fileToolStripMenuItem.DropDownItems.IndexOf(openToolStripMenuItem) + 1,
 				new ToolStripMenuItem("Close", null, CloseFile_Click));
 			toggleHeaderMenuItem = new ToolStripMenuItem("Hide Header", null, ToggleHeaderButton_Click);
@@ -50,6 +60,7 @@ namespace ScintillaNET.Demo {
 
 			// BASIC CONFIG
 			TextArea.Dock = System.Windows.Forms.DockStyle.Fill;
+			TextArea.ReadOnly = true;
 			TextArea.TextChanged += (this.OnTextChanged);
 
 			// INITIAL VIEW CONFIG
@@ -86,13 +97,88 @@ namespace ScintillaNET.Demo {
 			ediConfiguration = EdiHighlightConfiguration.Load(out configWarning);
 			if (!string.IsNullOrEmpty(configWarning))
 				ShowError(configWarning);
+			resultsSplitterDistance = splitContainer1.SplitterDistance;
+			splitContainer1.Panel2Collapsed = true;
+			toggleResultsMenuItem.Text = "Show Results";
 
+		}
+
+		private void LayoutMainTabControls()
+		{
+			int width = mainTabs.DisplayRectangle.Width;
+			int navigationEnd = Math.Max(225, labelTotals.Right);
+			int minimumSearchWidth = buttonCountFile.Width + 7 + checkBoxRegex.Width + 3 + 75 + 12 + buttonSearchFile.Width;
+			int preferredSearchWidth = minimumSearchWidth - 75 + 177;
+			bool wrapped = width < navigationEnd + 12 + minimumSearchWidth + 12;
+			bool stacked = wrapped && width < minimumSearchWidth + 23;
+			int rowTop = wrapped ? 41 : 12;
+			int searchLeft = wrapped ? 11 : Math.Max(navigationEnd + 12, width - preferredSearchWidth - 12);
+			buttonCountFile.Location = new Point(searchLeft, rowTop);
+			checkBoxRegex.Location = new Point(buttonCountFile.Right + 7, rowTop + 2);
+			int inputLeft = stacked ? 11 : checkBoxRegex.Right + 3;
+			int inputTop = stacked ? rowTop + 29 : rowTop;
+			int searchButtonLeft = Math.Max(inputLeft + 75 + 12, width - buttonSearchFile.Width - 12);
+			buttonSearchFile.Location = new Point(searchButtonLeft, inputTop);
+			textBoxSearchFile.Location = new Point(inputLeft, inputTop);
+			textBoxSearchFile.Width = Math.Min(177, Math.Max(75, searchButtonLeft - inputLeft - 12));
+
+			int byteGroupWidth = labelTotalBytes.Width + 12 + labelMaxBytes.Width + 8 + textBoxLimit.Width;
+			int inputLeftOption = labelByteOffset.Right + 35;
+			textBoxByteOffset.Left = inputLeftOption;
+			bool byteButtonWrapped = width < inputLeftOption + 60 + 8 + buttonGoToByte.Width + 12;
+			textBoxByteOffset.Width = Math.Min(134, Math.Max(60,
+				width - inputLeftOption - (byteButtonWrapped ? 12 : buttonGoToByte.Width + 20)));
+			buttonGoToByte.Location = byteButtonWrapped ? new Point(11, 41) : new Point(textBoxByteOffset.Right + 8, 12);
+			int bytesTop = !byteButtonWrapped && width >= buttonGoToByte.Right + 12 + byteGroupWidth + 24
+				? 12 : byteButtonWrapped ? 74 : 41;
+			if (byteGroupWidth + 35 <= width)
+			{
+				int groupLeft = width - byteGroupWidth - 24;
+				labelTotalBytes.Location = new Point(groupLeft, bytesTop + 4);
+				labelMaxBytes.Location = new Point(labelTotalBytes.Right + 12, bytesTop + 4);
+				textBoxLimit.Location = new Point(labelMaxBytes.Right + 8, bytesTop);
+			}
+			else
+			{
+				labelTotalBytes.Location = new Point(11, bytesTop + 4);
+				bytesTop += 29;
+				int maxGroupWidth = labelMaxBytes.Width + 8 + textBoxLimit.Width;
+				int maxGroupLeft = Math.Max(11, width - maxGroupWidth - 24);
+				labelMaxBytes.Location = new Point(maxGroupLeft, bytesTop + 4);
+				textBoxLimit.Location = new Point(labelMaxBytes.Right + 8, bytesTop);
+			}
+
+			int height = Math.Max(stacked ? 133 : wrapped ? 104 : 75,
+				bytesTop == 12 ? 75 : bytesTop + 63);
+			if (mainTabs.Height != height)
+			{
+				int oldTop = splitContainer1.Top;
+				mainTabs.Height = height;
+				if (mainTabs.Visible)
+				{
+					int newTop = mainTabs.Bottom + 2;
+					splitContainer1.Top = newTop;
+					splitContainer1.Height += oldTop - newTop;
+					if (splitContainer1.Panel2Collapsed)
+						resultsSplitterDistance += oldTop - newTop;
+					else
+					{
+						int maximum = splitContainer1.Height - splitContainer1.Panel2MinSize - splitContainer1.SplitterWidth;
+						if (maximum >= splitContainer1.Panel1MinSize)
+							splitContainer1.SplitterDistance = Math.Max(splitContainer1.Panel1MinSize,
+								Math.Min(splitContainer1.SplitterDistance + oldTop - newTop, maximum));
+					}
+				}
+			tabBottomBorderCover.SetBounds(mainTabs.Left, mainTabs.Bottom - tabBottomBorderCover.Height,
+				mainTabs.Width, tabBottomBorderCover.Height);
+			}
 		}
 
 		private void ToggleHeaderButton_Click(object sender, EventArgs e)
 		{
 			int oldTop = splitContainer1.Top;
 			mainTabs.Visible = !mainTabs.Visible;
+			tabBottomBorderCover.Visible = mainTabs.Visible;
 			int newTop = mainTabs.Visible ? mainTabs.Bottom + 2 : menuStrip1.Bottom + 2;
 			splitContainer1.Top = newTop;
 			splitContainer1.Height += oldTop - newTop;
@@ -538,6 +624,101 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
+		private void goToLineToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			using (Form prompt = new Form())
+			using (TextBox input = new TextBox())
+			using (Button go = new Button())
+			using (Button cancel = new Button())
+			{
+				prompt.Text = "Go To Line";
+				prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
+				prompt.StartPosition = FormStartPosition.CenterParent;
+				prompt.ClientSize = new Size(270, 85);
+				prompt.MaximizeBox = false;
+				prompt.MinimizeBox = false;
+				input.Location = new Point(12, 12);
+				input.Size = new Size(246, 23);
+				input.Text = "1";
+				go.Text = "Go";
+				go.Location = new Point(102, 48);
+				go.DialogResult = DialogResult.OK;
+				cancel.Text = "Cancel";
+				cancel.Location = new Point(183, 48);
+				cancel.DialogResult = DialogResult.Cancel;
+				prompt.Controls.Add(input);
+				prompt.Controls.Add(go);
+				prompt.Controls.Add(cancel);
+				prompt.AcceptButton = go;
+				prompt.CancelButton = cancel;
+				if (prompt.ShowDialog(this) != DialogResult.OK) return;
+
+				long lineNumber;
+				if (!long.TryParse(input.Text.Trim(), out lineNumber) || lineNumber < 1)
+				{
+					ShowError("Enter a positive line number (starting at 1).");
+					return;
+				}
+				GoToLine(lineNumber);
+			}
+		}
+
+		private void GoToLine(long lineNumber)
+		{
+			try
+			{
+				string path = FileUtils.CurFileName;
+				if (string.IsNullOrEmpty(path) || !File.Exists(path))
+				{
+					ShowError("Open a file before navigating to a line.");
+					return;
+				}
+				int limit = getLimit();
+				if (limit <= 0)
+				{
+					ShowError("Enter a positive page size on the Options tab.");
+					return;
+				}
+				long offset = FileUtils.GetOffsetAtLine(path, lineNumber);
+				if (offset < 0)
+				{
+					ShowError("The line number is beyond the end of the file.");
+					return;
+				}
+				long length = new FileInfo(path).Length;
+				long page = Math.Min(offset, Math.Max(0, length - 1)) / limit;
+				if (page > int.MaxValue)
+				{
+					ShowError("The line is beyond the supported page range.");
+					return;
+				}
+				DisplayPage((int)page, limit);
+				textBoxPage.Text = page.ToString();
+				ApplyEdiRecordBoundaries();
+				if (FileUtils.LineOffsetIndex == null && displayedPageStartOffset > 0)
+				{
+					Cursor = Cursors.WaitCursor;
+					try { FileUtils.BuildLineIndex(path); }
+					finally { Cursor = Cursors.Default; }
+				}
+				long startLine = FileUtils.GetLineNumberAtOffset(path, displayedPageStartOffset);
+				long index = lineNumber - startLine;
+				if (index < 0 || index >= TextArea.Lines.Count)
+				{
+					ShowError("The line is outside the displayed page.");
+					return;
+				}
+				int line = (int)index;
+				TextArea.FirstVisibleLine = Math.Max(0, line - TextArea.LinesOnScreen / 2);
+				TextArea.GotoPosition(TextArea.Lines[line].Position);
+				TextArea.Focus();
+			}
+			catch (Exception ex)
+			{
+				ShowError("Error navigating to line:", ex);
+			}
+		}
+
 		#endregion
 
 		#region Drag & Drop File
@@ -659,12 +840,8 @@ namespace ScintillaNET.Demo {
 				labelTotals.Text = totPages.ToString(); 
 
 				// Show original file name in title bar, not temp path
-				string displayName = path;
-				if (!string.IsNullOrEmpty(FileUtils.OriginalFileName))
-					displayName = FileUtils.OriginalFileName;
-				else if (!string.IsNullOrEmpty(FileUtils.LastTempZipDir) && path.StartsWith(FileUtils.LastTempZipDir, StringComparison.OrdinalIgnoreCase))
-					displayName = Path.GetFileName(path);
-				this.Text = displayName;
+				string displayPath = string.IsNullOrEmpty(FileUtils.OriginalFileName) ? path : FileUtils.OriginalFileName;
+				this.Text = Path.GetFileName(displayPath);
 
 
 				try
@@ -683,7 +860,7 @@ namespace ScintillaNET.Demo {
 						}
 
 
-						TextArea.Text = FileUtils.readNBites(path, limit, 0);
+						SetDisplayedText(FileUtils.readNBites(path, limit, 0));
 						FileUtils.GCTrigger++;
 
 						// Auto-unwrap EDI files with no line breaks to temp file
@@ -755,7 +932,7 @@ namespace ScintillaNET.Demo {
 					return;
 				}
 
-				TextArea.Text = File.ReadAllText(path);
+				SetDisplayedText(File.ReadAllText(path));
 
 			}
 		}
@@ -770,9 +947,16 @@ namespace ScintillaNET.Demo {
 			}
 		}
 
+		private void SetDisplayedText(string text)
+		{
+			TextArea.ReadOnly = false;
+			try { TextArea.Text = text; }
+			finally { TextArea.ReadOnly = true; }
+		}
+
 		private void CloseFile_Click(object sender, EventArgs e)
 		{
-			TextArea.Text = "";
+			SetDisplayedText("");
 			richTextBoxBottom.Clear();
 			regexSearchResults = false;
 			regexSearchPattern = null;
@@ -1075,13 +1259,13 @@ namespace ScintillaNET.Demo {
 		private void unWrapXMLToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			InitSyntaxColoringXML();
-			TextArea.Text = FileUtils.UnWrapXML(TextArea.Text);
+			SetDisplayedText(FileUtils.UnWrapXML(TextArea.Text));
 		}
 
 		private void unWrapXMLShortcut()
 		{
 			InitSyntaxColoringXML();
-			TextArea.Text = FileUtils.UnWrapXML(TextArea.Text);
+			SetDisplayedText(FileUtils.UnWrapXML(TextArea.Text));
 		}
 
 		private void unWrapXMLFileToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1297,7 +1481,7 @@ namespace ScintillaNET.Demo {
 
 		private void unWrapFixWidthToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			TextArea.Text = FileUtils.getFixWidth(TextArea.Text, 80);
+			SetDisplayedText(FileUtils.getFixWidth(TextArea.Text, 80));
 		}
 
 		private void reloadPageToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1492,7 +1676,7 @@ namespace ScintillaNET.Demo {
 				long fileLength = new FileInfo(source).Length;
 				if (limit <= 0)
 				{
-					ShowError("Enter a positive page size on the Main tab.");
+					ShowError("Enter a positive page size on the Options tab.");
 					return;
 				}
 				if (fileLength == 0)
@@ -1598,7 +1782,6 @@ namespace ScintillaNET.Demo {
         private void resetObjectsToolStripMenuItem_Click(object sender, EventArgs e)
         {
 			InitControls();
-			TextArea.Text = "";			
 			TextArea.Dispose();
 			System.GC.Collect();
 			// CREATE CONTROL
@@ -1607,6 +1790,7 @@ namespace ScintillaNET.Demo {
 
 			// BASIC CONFIG
 			TextArea.Dock = System.Windows.Forms.DockStyle.Fill;
+			TextArea.ReadOnly = true;
 			TextArea.TextChanged += (this.OnTextChanged);
 
 			// INITIAL VIEW CONFIG
@@ -1657,6 +1841,8 @@ namespace ScintillaNET.Demo {
 				}
 			}
 			regexSearchResults = false;
+			if (splitContainer1.Panel2Collapsed)
+				ToggleResultsButton_Click(null, EventArgs.Empty);
 
 			// Show busy state
 			buttonSearchFile.Enabled = false;
@@ -1732,6 +1918,8 @@ namespace ScintillaNET.Demo {
 					return;
 				}
 			}
+			if (splitContainer1.Panel2Collapsed)
+				ToggleResultsButton_Click(null, EventArgs.Empty);
 
 			buttonCountFile.Enabled = false;
 			buttonCountFile.Text = "Counting...";
@@ -2051,14 +2239,14 @@ namespace ScintillaNET.Demo {
 			else
 			{
 				displayedPageStartOffset = (long)page * limit;
-				TextArea.Text = FileUtils.readNBites(FileUtils.CurFileName, limit, page);
+				SetDisplayedText(FileUtils.readNBites(FileUtils.CurFileName, limit, page));
 			}
 		}
 
 		private void DisplayPaddedPage(int page, int limit)
 		{
 			long startOffset;
-			TextArea.Text = FileUtils.ReadPaddedPage(FileUtils.CurFileName, limit, page, out startOffset);
+			SetDisplayedText(FileUtils.ReadPaddedPage(FileUtils.CurFileName, limit, page, out startOffset));
 			displayedPageStartOffset = startOffset;
 			ApplyLineNumbers(startOffset);
 		}

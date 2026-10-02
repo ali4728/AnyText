@@ -85,6 +85,38 @@ namespace ScintillaNET.Demo.Utils
             return lineNumber;
         }
 
+        public static long GetOffsetAtLine(string path, long lineNumber)
+        {
+            if (lineNumber < 1) return -1;
+            if (lineNumber == 1) return 0;
+
+            int checkpoint = 0;
+            if (LineOffsetIndex != null)
+            {
+                for (int i = 1; i < LineOffsetIndex.Length && LineOffsetIndex[i] < lineNumber; i++)
+                    checkpoint = i;
+            }
+
+            long currentLine = checkpoint == 0 ? 1 : LineOffsetIndex[checkpoint];
+            using (FileStream file = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                long position = (long)checkpoint * LineCheckpointInterval;
+                file.Seek(position, SeekOrigin.Begin);
+                byte[] buffer = new byte[LineCheckpointInterval];
+                int read;
+                while ((read = file.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    for (int i = 0; i < read; i++)
+                    {
+                        if (buffer[i] == (byte)'\n' && ++currentLine == lineNumber)
+                            return position + i + 1;
+                    }
+                    position += read;
+                }
+            }
+            return -1;
+        }
+
         public static string readAllFile(string path)
         {
             return File.ReadAllText(path);
