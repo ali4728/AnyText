@@ -117,9 +117,7 @@
             // 
             // TextPanel
             // 
-            this.TextPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+            this.TextPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.TextPanel.Location = new System.Drawing.Point(3, 8);
             this.TextPanel.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.TextPanel.Name = "TextPanel";
@@ -144,7 +142,14 @@
             // fileToolStripMenuItem
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.openToolStripMenuItem});
+            this.openToolStripMenuItem,
+            this.saveFileAsToolStripMenuItem,
+            this.unWrapXMLFileToolStripMenuItem,
+            this.toolStripSeparatorTemp,
+            this.copyOriginalPathToolStripMenuItem,
+            this.toolStripMenuItemFileName,
+            this.copyTempPathToolStripMenuItem,
+            this.openTempFolderToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             this.fileToolStripMenuItem.Size = new System.Drawing.Size(41, 23);
             this.fileToolStripMenuItem.Text = "File";
@@ -171,8 +176,7 @@
             this.outdentSelectionToolStripMenuItem,
             this.toolStripSeparator3,
             this.uppercaseSelectionToolStripMenuItem,
-            this.lowercaseSelectionToolStripMenuItem,
-            this.toolStripMenuItemFileName});
+            this.lowercaseSelectionToolStripMenuItem});
             this.editToolStripMenuItem.Name = "editToolStripMenuItem";
             this.editToolStripMenuItem.Size = new System.Drawing.Size(44, 23);
             this.editToolStripMenuItem.Text = "Edit";
@@ -335,7 +339,6 @@
             this.wordWrapItem,
             this.toolStripSeparator9,
             this.unWrapXMLToolStripMenuItem,
-            this.unWrapXMLFileToolStripMenuItem,
             this.unWrapFixWidthToolStripMenuItem,
             this.reloadPageToolStripMenuItem,
             this.ediRecordBoundariesToolStripMenuItem,
@@ -352,12 +355,7 @@
             this.toolStripSeparator8,
             this.sQLStyleToolStripMenuItem,
             this.syntaxXMLToolStripMenuItem,
-            this.syntaxPlainToolStripMenuItem,
-            this.saveFileAsToolStripMenuItem,
-            this.toolStripSeparatorTemp,
-            this.copyTempPathToolStripMenuItem,
-            this.openTempFolderToolStripMenuItem,
-            this.copyOriginalPathToolStripMenuItem});
+            this.syntaxPlainToolStripMenuItem});
             this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
             this.viewToolStripMenuItem.Size = new System.Drawing.Size(50, 23);
             this.viewToolStripMenuItem.Text = "View";
@@ -714,6 +712,7 @@
             // 
             this.splitContainer1.Panel1.Controls.Add(this.PanelSearch);
             this.splitContainer1.Panel1.Controls.Add(this.TextPanel);
+            this.splitContainer1.Panel1.Padding = new System.Windows.Forms.Padding(3, 8, 10, 8);
             // 
             // splitContainer1.Panel2
             // 

@@ -126,7 +126,8 @@ namespace ScintillaNET.Demo.Utils
         public static void UpdateClip()
         {
             string name = !string.IsNullOrEmpty(OriginalFileName) ? OriginalFileName : CurFileName;
-            Clipboard.SetText(name);
+            if (!string.IsNullOrEmpty(CurFileName) && File.Exists(CurFileName))
+                Clipboard.SetText(Path.GetFileName(name));
         }
         public static string readNBites(string path, int limit, int offset)
         {
@@ -530,6 +531,70 @@ namespace ScintillaNET.Demo.Utils
         public static string OriginalFileName = "";
         public static string LastTempEdiDir = "";
 
+        private static readonly Dictionary<string, FileStream> tempLocks = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
+
+        private static void TrackTempDir(string dir)
+        {
+            tempLocks.Add(dir, new FileStream(Path.Combine(dir, ".anytext-in-use"), FileMode.CreateNew,
+                FileAccess.ReadWrite, FileShare.None));
+        }
+
+        private static void ReleaseTempDir(string dir)
+        {
+            FileStream file;
+            if (tempLocks.TryGetValue(dir, out file))
+            {
+                file.Dispose();
+                tempLocks.Remove(dir);
+            }
+        }
+
+        public static List<string> GetStaleTempDirs(DateTime olderThanUtc)
+        {
+            List<string> dirs = new List<string>();
+            foreach (string dir in Directory.GetDirectories(Path.GetTempPath(), "EDIViewer_*", SearchOption.TopDirectoryOnly))
+            {
+                string name = Path.GetFileName(dir);
+                string id = name.StartsWith("EDIViewer_EDI_", StringComparison.OrdinalIgnoreCase)
+                    ? name.Substring("EDIViewer_EDI_".Length) : name.Substring("EDIViewer_".Length);
+                Guid guid;
+                if (id.Length != 32 || !Guid.TryParseExact(id, "N", out guid) ||
+                    string.Equals(dir, LastTempZipDir, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(dir, LastTempEdiDir, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                try
+                {
+                    if (Directory.GetLastWriteTimeUtc(dir) < olderThanUtc)
+                        dirs.Add(dir);
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+            return dirs;
+        }
+
+        public static int CleanupStaleTempDirs(IEnumerable<string> dirs, out int failed)
+        {
+            int removed = 0;
+            failed = 0;
+            foreach (string dir in dirs)
+            {
+                try
+                {
+                    string lockPath = Path.Combine(dir, ".anytext-in-use");
+                    if (File.Exists(lockPath))
+                    {
+                        using (new FileStream(lockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+                    }
+                    Directory.Delete(dir, true);
+                    removed++;
+                }
+                catch (IOException) { failed++; }
+                catch (UnauthorizedAccessException) { failed++; }
+            }
+            return removed;
+        }
+
         public static bool IsZipFile(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -559,6 +624,7 @@ namespace ScintillaNET.Demo.Utils
                 CleanupTempEdiDir();
                 tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_EDI_" + Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(tempDir);
+                TrackTempDir(tempDir);
                 LastTempEdiDir = tempDir;
             }
 
@@ -758,6 +824,10 @@ namespace ScintillaNET.Demo.Utils
 
             string tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tempDir);
+            TrackTempDir(tempDir);
+
+            try
+            {
 
             Type shellAppType = Type.GetTypeFromProgID("Shell.Application");
             dynamic shell = Activator.CreateInstance(shellAppType);
@@ -790,10 +860,20 @@ namespace ScintillaNET.Demo.Utils
             LastTempZipDir = tempDir;
             Console.WriteLine("Extracted ZIP to: " + tempDir);
             return tempDir;
+            }
+            catch
+            {
+                ReleaseTempDir(tempDir);
+                try { Directory.Delete(tempDir, true); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
         }
 
         public static void CleanupTempZipDir()
         {
+            ReleaseTempDir(LastTempZipDir);
             if (!string.IsNullOrEmpty(LastTempZipDir) && Directory.Exists(LastTempZipDir))
             {
                 try
@@ -825,6 +905,7 @@ namespace ScintillaNET.Demo.Utils
                 CleanupTempEdiDir();
                 tempDir = Path.Combine(Path.GetTempPath(), "EDIViewer_EDI_" + Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(tempDir);
+                TrackTempDir(tempDir);
                 LastTempEdiDir = tempDir;
             }
 
@@ -868,6 +949,7 @@ namespace ScintillaNET.Demo.Utils
 
         public static void CleanupTempEdiDir()
         {
+            ReleaseTempDir(LastTempEdiDir);
             if (!string.IsNullOrEmpty(LastTempEdiDir) && Directory.Exists(LastTempEdiDir))
             {
                 try

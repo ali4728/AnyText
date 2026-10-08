@@ -37,10 +37,12 @@ namespace ScintillaNET.Demo {
 			tabBottomBorderCover.Height = 4;
 			Controls.Add(tabBottomBorderCover);
 			tabBottomBorderCover.BringToFront();
+			ClientSizeChanged += delegate { ResizeViewerPane(); };
 			mainTabs.Resize += delegate { LayoutMainTabControls(); };
 			mainTabs.SelectedIndexChanged += delegate { LayoutMainTabControls(); };
 			labelTotalBytes.TextChanged += delegate { LayoutMainTabControls(); };
 			LayoutMainTabControls();
+			ResizeViewerPane();
 			fileToolStripMenuItem.DropDownItems.Insert(fileToolStripMenuItem.DropDownItems.IndexOf(openToolStripMenuItem) + 1,
 				new ToolStripMenuItem("Close", null, CloseFile_Click));
 			toggleHeaderMenuItem = new ToolStripMenuItem("Hide Header", null, ToggleHeaderButton_Click);
@@ -49,10 +51,10 @@ namespace ScintillaNET.Demo {
 			viewToolStripMenuItem.DropDownItems.Insert(1, toggleResultsMenuItem);
 			viewToolStripMenuItem.DropDownItems.Insert(2, new ToolStripSeparator());
 			ToolStripMenuItem copyOriginalFileNameMenuItem = new ToolStripMenuItem("Copy Original File Name", null, CopyOriginalFileName_Click);
-			int pathItemIndex = viewToolStripMenuItem.DropDownItems.IndexOf(copyOriginalPathToolStripMenuItem);
-			viewToolStripMenuItem.DropDownItems.Insert(pathItemIndex + 1, copyOriginalFileNameMenuItem);
+			fileToolStripMenuItem.DropDownItems.Insert(fileToolStripMenuItem.DropDownItems.IndexOf(toolStripMenuItemFileName) + 1, copyOriginalFileNameMenuItem);
+			fileToolStripMenuItem.DropDownItems.Add(new ToolStripMenuItem("Clean Up Old Temp Folders...", null, CleanupOldTempFolders_Click));
 			deidentifyEdiMenuItem = new ToolStripMenuItem("De-identify EDI and Save Copy...", null, DeidentifyEdi_Click);
-			viewToolStripMenuItem.DropDownItems.Insert(viewToolStripMenuItem.DropDownItems.IndexOf(saveFileAsToolStripMenuItem) + 1, deidentifyEdiMenuItem);
+			fileToolStripMenuItem.DropDownItems.Insert(fileToolStripMenuItem.DropDownItems.IndexOf(saveFileAsToolStripMenuItem) + 1, deidentifyEdiMenuItem);
 
 			// CREATE CONTROL
 			TextArea = new ScintillaNET.Scintilla();
@@ -101,6 +103,11 @@ namespace ScintillaNET.Demo {
 			splitContainer1.Panel2Collapsed = true;
 			toggleResultsMenuItem.Text = "Show Results";
 
+		}
+
+		private void ResizeViewerPane()
+		{
+			splitContainer1.Width = Math.Max(0, ClientSize.Width - splitContainer1.Left - 12);
 		}
 
 		private void LayoutMainTabControls()
@@ -795,6 +802,7 @@ namespace ScintillaNET.Demo {
 						if (extractedFiles.Length == 0)
 						{
 							MessageBox.Show("No files found in ZIP archive.", "ZIP Extract", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+							FileUtils.CleanupTempZipDir();
 							return;
 						}
 
@@ -815,6 +823,7 @@ namespace ScintillaNET.Demo {
 							}
 							else
 							{
+								FileUtils.CleanupTempZipDir();
 								return;
 							}
 						}
@@ -825,6 +834,7 @@ namespace ScintillaNET.Demo {
 					}
 					catch (Exception ex)
 					{
+						FileUtils.CleanupTempZipDir();
 						MessageBox.Show("Failed to extract ZIP file: " + ex.Message, "ZIP Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					}
 					return;
@@ -1357,19 +1367,19 @@ namespace ScintillaNET.Demo {
 
 		private void copyTempPathToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			// Only copy if a temp file is actually in use (ZIP extraction or EDI unwrap)
-			if (string.IsNullOrEmpty(FileUtils.LastTempZipDir) && string.IsNullOrEmpty(FileUtils.LastTempEdiDir))
+			string tempPath = FileUtils.CurFileName;
+			bool inZipDir = !string.IsNullOrEmpty(FileUtils.LastTempZipDir) &&
+				tempPath.StartsWith(FileUtils.LastTempZipDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+			bool inEdiDir = !string.IsNullOrEmpty(FileUtils.LastTempEdiDir) &&
+				tempPath.StartsWith(FileUtils.LastTempEdiDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+			if (string.IsNullOrEmpty(tempPath) || !File.Exists(tempPath) || (!inZipDir && !inEdiDir))
 			{
 				MessageBox.Show("No temp file in use.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
 				return;
 			}
 
-			string tempPath = FileUtils.CurFileName;
-			if (!string.IsNullOrEmpty(tempPath) && File.Exists(tempPath))
-			{
-				Clipboard.SetText(tempPath);
-				Console.WriteLine("Copied temp path: " + tempPath);
-			}
+			Clipboard.SetText(Path.GetFullPath(tempPath));
+			Console.WriteLine("Copied temp path: " + tempPath);
 		}
 
 		private void openTempFolderToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1397,10 +1407,10 @@ namespace ScintillaNET.Demo {
 
 		private void copyOriginalPathToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			string originalPath = this.Text;
-			if (!string.IsNullOrEmpty(originalPath))
+			if (!string.IsNullOrEmpty(FileUtils.CurFileName) && File.Exists(FileUtils.CurFileName))
 			{
-				Clipboard.SetText(originalPath);
+				string originalPath = string.IsNullOrEmpty(FileUtils.OriginalFileName) ? FileUtils.CurFileName : FileUtils.OriginalFileName;
+				Clipboard.SetText(Path.GetFullPath(originalPath));
 				Console.WriteLine("Copied original path: " + originalPath);
 			}
 		}
@@ -2289,6 +2299,31 @@ namespace ScintillaNET.Demo {
 		{
 			FileUtils.CleanupTempZipDir();
 			FileUtils.CleanupTempEdiDir();
+		}
+
+		private void CleanupOldTempFolders_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				List<string> dirs = FileUtils.GetStaleTempDirs(DateTime.UtcNow.AddDays(-30));
+				if (dirs.Count == 0)
+				{
+					MessageBox.Show(this, "No AnyText temp folders older than 30 days were found.", "Temp Folder Cleanup");
+					return;
+				}
+				if (MessageBox.Show(this, String.Format("Delete {0} AnyText temp folder(s) older than 30 days? Folders in use will be skipped.", dirs.Count),
+					"Temp Folder Cleanup", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+					return;
+				int failed;
+				int removed = FileUtils.CleanupStaleTempDirs(dirs, out failed);
+				MessageBox.Show(this, String.Format("Deleted {0} folder(s). Could not delete {1} folder(s) (in use or inaccessible).", removed, failed),
+					"Temp Folder Cleanup");
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, "Could not scan temp folders: " + ex.Message, "Temp Folder Cleanup",
+					MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
