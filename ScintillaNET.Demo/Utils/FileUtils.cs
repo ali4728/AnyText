@@ -533,9 +533,22 @@ namespace ScintillaNET.Demo.Utils
 
         private static readonly Dictionary<string, FileStream> tempLocks = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
 
+        public const string TempMarkerName = ".anytext-in-use";
+
+        public static string[] GetUserFiles(string dir)
+        {
+            List<string> result = new List<string>();
+            foreach (string f in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+            {
+                if (!string.Equals(Path.GetFileName(f), TempMarkerName, StringComparison.OrdinalIgnoreCase))
+                    result.Add(f);
+            }
+            return result.ToArray();
+        }
+
         private static void TrackTempDir(string dir)
         {
-            tempLocks.Add(dir, new FileStream(Path.Combine(dir, ".anytext-in-use"), FileMode.CreateNew,
+            tempLocks.Add(dir, new FileStream(Path.Combine(dir, TempMarkerName), FileMode.CreateNew,
                 FileAccess.ReadWrite, FileShare.None));
         }
 
@@ -581,7 +594,7 @@ namespace ScintillaNET.Demo.Utils
             {
                 try
                 {
-                    string lockPath = Path.Combine(dir, ".anytext-in-use");
+                    string lockPath = Path.Combine(dir, TempMarkerName);
                     if (File.Exists(lockPath))
                     {
                         using (new FileStream(lockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
@@ -849,7 +862,7 @@ namespace ScintillaNET.Demo.Utils
             {
                 Thread.Sleep(200);
                 elapsed += 200;
-                string[] files = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories);
+                string[] files = GetUserFiles(tempDir);
                 if (files.Length >= expectedCount)
                 {
                     Thread.Sleep(300);

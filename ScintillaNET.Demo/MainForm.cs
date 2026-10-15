@@ -798,7 +798,7 @@ namespace ScintillaNET.Demo {
 					try
 					{
 						string tempDir = FileUtils.ExtractZipToTemp(path);
-						string[] extractedFiles = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories);
+						string[] extractedFiles = FileUtils.GetUserFiles(tempDir);
 						if (extractedFiles.Length == 0)
 						{
 							MessageBox.Show("No files found in ZIP archive.", "ZIP Extract", MessageBoxButtons.OK, MessageBoxIcon.Warning);
